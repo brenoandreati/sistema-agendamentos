@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
       p.appointment ? p.appointment.services.map((s) => s.name).join(" + ") : (p.description ?? ""),
       p.appointment?.professional.name ?? "",
       p.method ? PAYMENT_METHOD[p.method] : "Online",
-      p.channel === "ONLINE" ? "Online" : "Na barbearia",
+      p.channel === "ONLINE" ? "Online" : "Presencial",
       (p.amountCents / 100).toFixed(2).replace(".", ","),
     ]),
   ];

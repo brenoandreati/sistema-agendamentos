@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { getCustomer } from "@/lib/auth";
 import { getBookingCatalog } from "@/lib/booking";
 import { addDays, todayStr, weekdayOf } from "@/lib/time";
 import { BookingFlow } from "./booking-flow";
@@ -8,7 +9,7 @@ const MONTH_SHORT = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "se
 
 export default async function BookingPage({ params }: PageProps<"/agendar/[slug]">) {
   const { slug } = await params;
-  const catalog = await getBookingCatalog(slug);
+  const [catalog, customer] = await Promise.all([getBookingCatalog(slug), getCustomer()]);
   if (!catalog) notFound();
   const { shop, services, professionals } = catalog;
 
@@ -27,6 +28,7 @@ export default async function BookingPage({ params }: PageProps<"/agendar/[slug]
   return (
     <BookingFlow
       slug={shop.slug}
+      customer={customer ? { name: customer.name, email: customer.email, phone: customer.phone } : null}
       payment={{ paymentMode: shop.paymentMode, depositPercent: shop.depositPercent, holdMin: shop.paymentHoldMin }}
       services={services.map((s) => ({
         id: s.id,

@@ -1,4 +1,4 @@
-import { CalendarDays, House, Scissors, Settings, UserRound, Users, Wallet, type LucideIcon } from "lucide-react";
+import { CalendarDays, ClipboardList, House, Settings, UserRound, Users, Wallet, type LucideIcon } from "lucide-react";
 
 export type NavItem = { href: string; label: string; icon: LucideIcon };
 
@@ -10,7 +10,7 @@ export const MAIN_ITEMS: NavItem[] = [
 ];
 
 export const MORE_ITEMS: NavItem[] = [
-  { href: "/painel/servicos", label: "Serviços", icon: Scissors },
+  { href: "/painel/servicos", label: "Serviços", icon: ClipboardList },
   { href: "/painel/profissionais", label: "Profissionais", icon: UserRound },
   { href: "/painel/configuracoes", label: "Configurações", icon: Settings },
 ];

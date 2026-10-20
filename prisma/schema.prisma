@@ -9,6 +9,14 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+/// Área de atuação do negócio. Define serviços e visual padrão.
+enum Niche {
+  BARBER // barbearia
+  HAIR // cabeleireira / salão
+  NAILS // nail designer
+  OTHER // estética, cílios, sobrancelha, maquiagem...
+}
+
 enum Role {
   OWNER
   STAFF
@@ -58,6 +66,7 @@ enum PaymentStatus {
 
 model Shop {
   id              String      @id @default(cuid())
+  niche           Niche       @default(OTHER)
   name            String
   slug            String      @unique
   phone           String?
@@ -178,6 +187,18 @@ model Client {
   @@unique([shopId, phone])
 }
 
+/// Conta opcional de quem agenda. Vale para qualquer negócio da plataforma.
+model Customer {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  phone        String
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  appointments Appointment[]
+}
+
 model Appointment {
   id             String            @id @default(cuid())
   shopId         String
@@ -186,6 +207,9 @@ model Appointment {
   professional   Professional      @relation(fields: [professionalId], references: [id])
   clientId       String
   client         Client            @relation(fields: [clientId], references: [id])
+  /// Conta de quem agendou, quando agendou logado. Só esses aparecem em "Meus agendamentos".
+  customerId     String?
+  customer       Customer?         @relation(fields: [customerId], references: [id], onDelete: SetNull)
   startAt        DateTime
   endAt          DateTime
   status         AppointmentStatus @default(CONFIRMED)
@@ -204,6 +228,7 @@ model Appointment {
 
   @@index([shopId, startAt])
   @@index([professionalId, startAt])
+  @@index([customerId])
 }
 
 /// Serviço dentro de um agendamento. Nome, preço e duração são copiados para manter o histórico.

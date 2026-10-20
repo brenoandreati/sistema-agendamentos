@@ -16,7 +16,7 @@ export async function saveShopInfo(_: ActionState, form: FormData): Promise<Acti
   const name = text(form, "name");
   const slug = slugify(text(form, "slug"));
   const phone = optionalText(form, "phone");
-  if (!name) return fail("Informe o nome da barbearia.");
+  if (!name) return fail("Informe o nome do seu negócio.");
   if (slug.length < 3) return fail("O endereço do link precisa ter pelo menos 3 letras ou números.");
   const taken = await db.shop.findUnique({ where: { slug }, select: { id: true } });
   if (taken && taken.id !== shopId) return fail("Esse endereço de link já está em uso. Escolha outro.");

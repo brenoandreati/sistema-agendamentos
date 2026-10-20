@@ -3,13 +3,15 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { PaymentMode } from "@prisma/client";
-import { Check } from "lucide-react";
+import { Check, CircleUserRound, Users } from "lucide-react";
+import { CustomerAuthForms } from "@/components/customer-auth";
 import { Alert } from "@/components/forms";
 import { Button, Card, cn, Field, Input, Textarea } from "@/components/ui";
-import { durationLabel } from "@/lib/format";
+import { durationLabel, formatPhone } from "@/lib/format";
 import { formatMoney } from "@/lib/money";
 import { onlineAmountCents } from "@/lib/pricing";
 import { formatDateLong, minutesToHHMM } from "@/lib/time";
+import { customerSignOut, type CustomerProfile } from "@/app/cliente/actions";
 import { createBooking } from "./actions";
 
 type Service = { id: string; name: string; description: string | null; durationMin: number; priceCents: number };
@@ -25,8 +27,10 @@ export function BookingFlow({
   professionals,
   days,
   payment,
+  customer: initialCustomer,
 }: {
   slug: string;
+  customer: CustomerProfile | null;
   services: Service[];
   professionals: Professional[];
   days: Day[];
@@ -41,7 +45,10 @@ export function BookingFlow({
   const [slots, setSlots] = useState<number[] | null>(null);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [notes, setNotes] = useState("");
+  const [customer, setCustomer] = useState(initialCustomer);
+  const [mode, setMode] = useState<"guest" | "account">("guest");
   const [error, setError] = useState<string | null>(null);
   const [submitting, startSubmit] = useTransition();
 
@@ -91,12 +98,13 @@ export function BookingFlow({
   function chooseTime(slot: number) {
     setTime(slot);
     setStep(3);
-    // Preenche nome e WhatsApp de quem já agendou neste aparelho.
-    if (name || phone) return;
+    // Sem conta, preenche os dados de quem já agendou neste aparelho.
+    if (customer || name || phone) return;
     try {
       const saved = JSON.parse(localStorage.getItem(SAVED_CONTACT) ?? "null");
       if (saved?.name) setName(saved.name);
       if (saved?.phone) setPhone(saved.phone);
+      if (saved?.email) setEmail(saved.email);
     } catch {}
   }
 
@@ -104,18 +112,20 @@ export function BookingFlow({
     if (date === null || time === null) return;
     setError(null);
     startSubmit(async () => {
-      const result = await createBooking({ slug, serviceIds, professionalId, date, time, name, phone, notes });
+      const result = await createBooking({ slug, serviceIds, professionalId, date, time, name, phone, email, notes });
       if ("error" in result) {
         setError(result.error);
         return;
       }
       try {
-        localStorage.setItem(SAVED_CONTACT, JSON.stringify({ name, phone }));
+        if (!customer) localStorage.setItem(SAVED_CONTACT, JSON.stringify({ name, phone, email }));
       } catch {}
       if (/^https?:\/\//.test(result.redirectTo)) window.location.assign(result.redirectTo);
       else router.push(result.redirectTo);
     });
   }
+
+  const canSubmit = customer ? true : mode === "guest" && name.trim().length >= 2 && phone.replace(/\D/g, "").length >= 10;
 
   const periods = [
     { label: "Manhã", items: (slots ?? []).filter((s) => s < 12 * 60) },
@@ -191,8 +201,8 @@ export function BookingFlow({
             <div className="flex flex-col gap-2">
               {eligible.length > 1 && (
                 <ChoiceButton active={professionalId === "any"} onClick={() => chooseProfessional("any")}>
-                  <span className="grid size-10 place-items-center rounded-full bg-surface-2 text-lg" aria-hidden>
-                    ✂
+                  <span className="grid size-10 place-items-center rounded-full bg-surface-2 text-muted" aria-hidden>
+                    <Users className="size-5" />
                   </span>
                   <span>
                     <span className="block font-medium">Sem preferência</span>
@@ -281,20 +291,76 @@ export function BookingFlow({
               {professional ? ` · com ${professional.name}` : ""}
             </p>
           </Card>
-          <Field label="Seu nome">
-            <Input value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" required />
-          </Field>
-          <Field label="WhatsApp" hint="Para a barbearia falar com você sobre o horário.">
-            <Input
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              type="tel"
-              inputMode="tel"
-              autoComplete="tel"
-              placeholder="(11) 98765-4321"
-              required
-            />
-          </Field>
+          {customer ? (
+            <Card className="flex items-center gap-3 p-4">
+              <CircleUserRound className="size-8 shrink-0 text-brand" aria-hidden />
+              <div className="min-w-0 flex-1 text-sm">
+                <p className="font-medium">Agendando como {customer.name}</p>
+                <p className="truncate text-muted">
+                  {customer.email} · {formatPhone(customer.phone)}
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={async () => {
+                  await customerSignOut();
+                  setCustomer(null);
+                  setMode("guest");
+                  router.refresh();
+                }}
+              >
+                Sair
+              </Button>
+            </Card>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Como quer continuar">
+                <ChoiceButton active={mode === "guest"} onClick={() => setMode("guest")}>
+                  <span className="text-sm">
+                    <span className="block font-medium">Sem cadastro</span>
+                    <span className="block text-muted">Só nome e WhatsApp</span>
+                  </span>
+                </ChoiceButton>
+                <ChoiceButton active={mode === "account"} onClick={() => setMode("account")}>
+                  <span className="text-sm">
+                    <span className="block font-medium">Com minha conta</span>
+                    <span className="block text-muted">Dados salvos para as próximas vezes</span>
+                  </span>
+                </ChoiceButton>
+              </div>
+              {mode === "account" ? (
+                <CustomerAuthForms
+                  onDone={(profile) => {
+                    setCustomer(profile);
+                    setError(null);
+                    router.refresh();
+                  }}
+                />
+              ) : (
+                <>
+                  <Field label="Seu nome">
+                    <Input value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" required />
+                  </Field>
+                  <Field label="WhatsApp" hint="Para falarmos com você sobre o horário.">
+                    <Input
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      type="tel"
+                      inputMode="tel"
+                      autoComplete="tel"
+                      placeholder="(11) 98765-4321"
+                      required
+                    />
+                  </Field>
+                  <Field label="E-mail (opcional)">
+                    <Input value={email} onChange={(e) => setEmail(e.target.value)} type="email" autoComplete="email" />
+                  </Field>
+                </>
+              )}
+            </>
+          )}
           <Field label="Observação (opcional)">
             <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={500} />
           </Field>
@@ -323,7 +389,7 @@ export function BookingFlow({
               </Button>
             )}
             {step === 3 && (
-              <Button type="button" onClick={submit} disabled={submitting || !name.trim() || phone.replace(/\D/g, "").length < 10}>
+              <Button type="button" onClick={submit} disabled={submitting || !canSubmit}>
                 {submitting ? "Aguarde..." : payNow > 0 ? `Pagar ${formatMoney(payNow)}` : "Confirmar agendamento"}
               </Button>
             )}
@@ -352,14 +418,14 @@ function ChoiceButton({ active, onClick, children }: { active: boolean; onClick:
 
 function PaymentNote({ mode, payNow, total, holdMin }: { mode: PaymentMode; payNow: number; total: number; holdMin: number }) {
   if (payNow <= 0) {
-    return <p className="rounded-lg bg-surface-2 p-3 text-sm">O pagamento é feito na barbearia, no dia do atendimento.</p>;
+    return <p className="rounded-lg bg-surface-2 p-3 text-sm">O pagamento é feito no local, no dia do atendimento.</p>;
   }
   return (
     <div className="rounded-lg border border-brand/30 bg-brand/5 p-3 text-sm">
       {mode === "DEPOSIT" ? (
         <p>
           Para garantir o horário, você paga um sinal de <b>{formatMoney(payNow)}</b> agora, por Pix ou cartão. Os{" "}
-          <b>{formatMoney(total - payNow)}</b> restantes você paga na barbearia.
+          <b>{formatMoney(total - payNow)}</b> restantes você paga no local.
         </p>
       ) : (
         <p>

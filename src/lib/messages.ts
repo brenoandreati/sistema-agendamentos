@@ -19,21 +19,21 @@ function when({ startAt, timezone }: MessageInput) {
 
 export function confirmationMessage(input: MessageInput) {
   return (
-    `Olá, ${firstName(input.clientName)}! Seu horário na ${input.shopName} está confirmado: ` +
-    `${when(input)} com ${input.professionalName} (${input.services}). Até lá! ✂️`
+    `Olá, ${firstName(input.clientName)}! Seu horário está confirmado: ` +
+    `${when(input)} com ${input.professionalName} (${input.services}). ${input.shopName} agradece, até lá!`
   );
 }
 
 export function reminderMessage(input: MessageInput) {
   return (
-    `Olá, ${firstName(input.clientName)}! Passando para lembrar do seu horário na ${input.shopName}: ` +
-    `${when(input)} com ${input.professionalName}. Se precisar remarcar, é só responder esta mensagem.`
+    `Olá, ${firstName(input.clientName)}! Passando para lembrar do seu horário: ` +
+    `${when(input)} com ${input.professionalName}. ${input.shopName} te espera! Se precisar remarcar, é só responder esta mensagem.`
   );
 }
 
 export function paymentMessage(input: MessageInput & { link: string }) {
   return (
-    `Olá, ${firstName(input.clientName)}! Para confirmar seu horário na ${input.shopName} ` +
+    `Olá, ${firstName(input.clientName)}! Para confirmar seu horário em ${input.shopName} ` +
     `(${when(input)}), finalize o pagamento por este link: ${input.link}`
   );
 }

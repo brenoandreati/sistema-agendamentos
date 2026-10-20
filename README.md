@@ -1,31 +1,44 @@
 # Arvan Agendamentos
 
-Agenda online e financeiro para barbearias, com pagamento por Pix ou cartão na hora de agendar. Roda no **Cloudflare**.
+Agenda online e financeiro para quem atende com hora marcada, com pagamento por Pix ou cartão na hora de agendar. Roda no **Cloudflare**.
+
+No ar em: https://arvan-agendamentos.brenoandreati.workers.dev
 
 > Para trocar o nome ou o slogan do sistema, edite `src/config/brand.ts`.
-> A cor e o logo de cada barbearia são configurados dentro do sistema, em **Configurações**.
+> As áreas de atuação, com cor, ícone e serviços padrão de cada uma, ficam em `src/config/niches.ts`.
+> A cor e o logo de cada negócio são configurados dentro do sistema, em **Configurações**.
 
 ## O que o sistema faz
 
-**Para o cliente (página pública `/agendar/<sua-barbearia>`)**
+**Para quem se cadastra**
+- Na página inicial, a pessoa escolhe a área dela:
+  - **barbeiro**;
+  - **cabeleireira**;
+  - **nail designer**;
+  - **outra área**: estética, cílios, sobrancelha, maquiagem e afins.
+- O cadastro já vem com a cor, o ícone e os serviços típicos daquela área. Agenda e financeiro funcionam igual para todas.
+
+**Para o cliente (página pública `/agendar/<seu-negocio>`)**
+- Pode agendar **sem cadastro**, só com nome e WhatsApp (e-mail opcional).
+- Ou pode **criar uma conta**: os dados ficam salvos para as próximas vezes, e a página **Minha conta** (`/cliente`) mostra todos os horários dele, em qualquer negócio da plataforma.
 - Escolhe um ou mais serviços, o barbeiro (ou "sem preferência"), o dia e o horário livre.
 - Paga por **Pix ou cartão pelo Mercado Pago** para confirmar. O valor pode ser o total, um sinal (%) ou nada online.
 - O horário fica reservado por alguns minutos enquanto ele paga. Se não pagar, o horário volta a ficar livre.
 - Se duas pessoas tentam o mesmo horário ao mesmo tempo, só uma consegue. A outra recebe um aviso para escolher outro horário.
-- Recebe a confirmação na tela, com botão para salvar na agenda do celular e falar com a barbearia no WhatsApp.
+- Recebe a confirmação na tela, com botão para salvar na agenda do celular e falar com o negócio no WhatsApp.
 
-**Para a barbearia (painel `/painel`)**
+**Para o negócio (painel `/painel`)**
 - **Agenda do dia** com uma coluna por barbeiro: criar, remarcar, concluir, marcar falta, cancelar e fazer encaixe.
 - **Bloqueio de horários** (folga, almoço, compromisso).
-- **Vários barbeiros**, cada um com seus dias e horários de trabalho (com intervalo) e os serviços que faz.
+- **Vários profissionais**, cada um com seus dias e horários de trabalho (com intervalo) e os serviços que faz.
 - **Clientes** com histórico, total gasto, faltas e botão de WhatsApp com mensagem pronta de confirmação e lembrete.
 - **Financeiro** por dia, semana, mês e ano:
   - quanto entrou e a comparação com o período anterior;
   - quanto falta receber e ticket médio;
   - gráfico do que entrou;
   - **quem pagou** e **quem ainda não pagou**;
-  - divisão por forma de pagamento e entre online e na barbearia.
-- Registro de pagamento na barbearia (Pix, dinheiro, débito, crédito) e **entradas avulsas** (cliente sem agendamento).
+  - divisão por forma de pagamento e entre online e presencial.
+- Registro de pagamento presencial (Pix, dinheiro, débito, crédito) e **entradas avulsas** (cliente sem agendamento).
 - **Exportar planilha** (CSV que abre direto no Excel).
 - Funciona no celular e pode ser instalado na tela inicial, como um app.
 
@@ -78,7 +91,7 @@ Guarde essa senha: ela é o seu **AUTH_SECRET**.
    | `DATABASE_URL` | o endereço do Neon |
    | `AUTH_SECRET` | a chave secreta do passo 2 |
    | `APP_URL` | o endereço do sistema, ex.: `https://arvan-agendamentos.SEU-USUARIO.workers.dev` |
-9. Salve (**Deploy**). Pronto: abra o endereço, clique em **Criar conta** e cadastre sua barbearia.
+9. Salve (**Deploy**). Pronto: abra o endereço, escolha a sua área e cadastre o seu negócio.
 
 Daqui para frente, toda alteração enviada ao GitHub é publicada sozinha pelo Cloudflare.
 
@@ -103,9 +116,9 @@ Para cobrar de verdade:
 2. Copie o **Access Token de produção**. Ele começa com `APP_USR-`.
 3. No sistema, abra **Configurações → Pagamento online**, cole o token e salve.
 
-O dinheiro cai direto na conta do Mercado Pago da barbearia. O sistema confirma o pagamento de duas formas:
+O dinheiro cai direto na conta do Mercado Pago do negócio. O sistema confirma o pagamento de duas formas:
 - quando o cliente volta do checkout;
-- pelo aviso automático que o Mercado Pago envia para `/api/webhooks/mercadopago/<id-da-barbearia>`.
+- pelo aviso automático que o Mercado Pago envia para `/api/webhooks/mercadopago/<id-do-negócio>`.
 
 ---
 
@@ -117,11 +130,11 @@ Você precisa do [Node.js 20+](https://nodejs.org) e de um banco PostgreSQL. Pod
 npm install
 cp .env.example .env        # preencha DATABASE_URL e AUTH_SECRET
 npm run db:migrate          # cria as tabelas
-npm run db:seed             # opcional: barbearia de exemplo com 30 dias de dados
+npm run db:seed             # opcional: negócio de exemplo (barbearia) com 30 dias de dados
 npm run dev                 # abre em http://localhost:3000
 ```
 
-- Para entrar na barbearia de exemplo, use o e-mail `demo@exemplo.com` e a senha `123456`.
+- Para entrar no negócio de exemplo (uma barbearia), use o e-mail `demo@exemplo.com` e a senha `123456`.
 - A página de agendamento dela fica em `/agendar/exemplo`.
 
 Para testar exatamente como vai rodar no Cloudflare, copie `.dev.vars.example` para `.dev.vars` e rode `npm run preview`. O sistema abre em http://localhost:8787.
@@ -137,16 +150,17 @@ Para testar exatamente como vai rodar no Cloudflare, copie `.dev.vars.example` p
 | `npm run lint` / `npm run typecheck` | Verificar o código |
 | `npm run db:migrate` | Criar ou alterar tabelas (desenvolvimento) |
 | `npm run db:deploy` | Aplicar as tabelas em produção |
-| `npm run db:seed` | Criar a barbearia de exemplo |
+| `npm run db:seed` | Criar o negócio de exemplo |
 
 ## Onde fica cada coisa
 
 ```
-prisma/schema.prisma        tabelas: barbearia, usuários, profissionais, horários, serviços,
-                            clientes, agendamentos, bloqueios e pagamentos
+prisma/schema.prisma        tabelas: negócio, usuários, profissionais, horários, serviços, clientes,
+                            contas de cliente, agendamentos, bloqueios e pagamentos
 wrangler.jsonc              configuração do Cloudflare Workers
 open-next.config.ts         configuração do adaptador Next.js → Cloudflare
 src/config/brand.ts         nome e slogan do sistema
+src/config/niches.ts        áreas de atuação (cor, ícone e serviços padrão de cada uma)
 src/lib/db.ts               conexão com o banco (uma por acesso no Cloudflare)
 src/lib/availability.ts     cálculo dos horários livres (com testes)
 src/lib/scheduling.ts       agenda: horários livres, conflitos e reservas expiradas
@@ -154,7 +168,8 @@ src/lib/payments.ts         cobrança online e confirmação de pagamentos
 src/lib/mercadopago.ts      integração com a API do Mercado Pago
 src/lib/finance.ts          números do relatório financeiro
 src/app/agendar/[slug]/     página pública de agendamento e pagamento
-src/app/painel/             painel da barbearia (agenda, financeiro, cadastros, configurações)
+src/app/painel/             painel do negócio (agenda, financeiro, cadastros, configurações)
+src/app/cliente/            conta do cliente: entrar, criar conta e "Minha conta"
 ```
 
 ## Tecnologia
@@ -163,6 +178,6 @@ src/app/painel/             painel da barbearia (agenda, financeiro, cadastros, 
 - Prisma 6 com o driver `pg` e banco PostgreSQL.
 - Publicado no Cloudflare Workers pelo [OpenNext](https://opennext.js.org/cloudflare).
 - Segurança:
-  - o login usa sessão em cookie assinado (JWT);
+  - o login usa sessão em cookie assinado (JWT), com logins separados para o dono do negócio e para o cliente;
   - as senhas são guardadas com PBKDF2;
   - o token do Mercado Pago fica criptografado no banco (AES-256-GCM).

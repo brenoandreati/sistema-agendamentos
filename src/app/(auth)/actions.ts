@@ -6,10 +6,11 @@ import { createSession, destroySession } from "@/lib/auth";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { fail, optionalText, text, type ActionState } from "@/lib/action";
 import { onlyDigits, slugify } from "@/lib/format";
-import { DEFAULT_SERVICES, defaultWorkingHours } from "@/lib/defaults";
+import { defaultWorkingHours } from "@/lib/defaults";
+import { NICHES, nicheFromSlug } from "@/config/niches";
 
 async function uniqueSlug(base: string) {
-  const root = slugify(base) || "barbearia";
+  const root = slugify(base) || "meu-negocio";
   for (let i = 1; ; i++) {
     const slug = i === 1 ? root : `${root}-${i}`;
     const taken = await db.shop.findUnique({ where: { slug }, select: { id: true } });
@@ -23,8 +24,10 @@ export async function signUp(_: ActionState, form: FormData): Promise<ActionStat
   const email = text(form, "email").toLowerCase();
   const password = text(form, "password");
   const phone = optionalText(form, "phone");
+  const niche = nicheFromSlug(text(form, "tipo"));
 
-  if (!shopName || !name) return fail("Preencha o nome da barbearia e o seu nome.");
+  if (!niche) return fail("Escolha a sua área de atuação.");
+  if (!shopName || !name) return fail("Preencha o nome do seu negócio e o seu nome.");
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return fail("Informe um e-mail válido.");
   if (password.length < 6) return fail("A senha precisa ter pelo menos 6 caracteres.");
   if (await db.user.findUnique({ where: { email }, select: { id: true } })) {
@@ -34,22 +37,25 @@ export async function signUp(_: ActionState, form: FormData): Promise<ActionStat
   const passwordHash = await hashPassword(password);
   const shop = await db.shop.create({
     data: {
+      niche,
       name: shopName,
       slug: await uniqueSlug(shopName),
+      primaryColor: NICHES[niche].color,
       phone: phone ? onlyDigits(phone) : null,
       users: { create: { name, email, passwordHash, role: "OWNER" } },
       professionals: {
-        create: { name, workingHours: { create: defaultWorkingHours() } },
+        create: { name, color: NICHES[niche].color, workingHours: { create: defaultWorkingHours() } },
       },
     },
     include: { users: true, professionals: true },
   });
 
   await db.$transaction(
-    DEFAULT_SERVICES.map((service) =>
+    NICHES[niche].services.map((service, sortOrder) =>
       db.service.create({
         data: {
           ...service,
+          sortOrder,
           shopId: shop.id,
           professionals: { connect: shop.professionals.map((p) => ({ id: p.id })) },
         },

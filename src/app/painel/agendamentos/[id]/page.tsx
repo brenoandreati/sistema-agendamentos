@@ -120,7 +120,7 @@ export default async function AppointmentPage({ params }: PageProps<"/painel/age
                   <div className="min-w-0 flex-1">
                     <p className="font-medium">
                       {p.method ? PAYMENT_METHOD[p.method] : "Pagamento online"}{" "}
-                      <span className="font-normal text-muted">· {p.channel === "ONLINE" ? "online" : "na barbearia"}</span>
+                      <span className="font-normal text-muted">· {p.channel === "ONLINE" ? "online" : "presencial"}</span>
                     </p>
                     <p className="text-muted">
                       {p.paidAt ? `Pago em ${formatDateNumeric(toDateStr(p.paidAt, tz))} às ${formatTime(p.paidAt, tz)}` : `Criado às ${formatTime(p.createdAt, tz)}`}
@@ -144,7 +144,7 @@ export default async function AppointmentPage({ params }: PageProps<"/painel/age
 
           {!closed && remaining > 0 && (
             <Card className="p-5">
-              <h2 className="mb-4 font-semibold">Registrar pagamento na barbearia</h2>
+              <h2 className="mb-4 font-semibold">Registrar pagamento presencial</h2>
               <ActionForm action={registerPayment} className="flex flex-col gap-4">
                 <input type="hidden" name="appointmentId" value={appointment.id} />
                 <div className="grid gap-4 sm:grid-cols-2">

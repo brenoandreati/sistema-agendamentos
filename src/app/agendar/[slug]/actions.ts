@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import type { PaymentMethod } from "@prisma/client";
 import { db } from "@/lib/db";
+import { getCustomer } from "@/lib/auth";
 import { eligibleProfessionals, getBookingCatalog } from "@/lib/booking";
 import { findOrCreateClient } from "@/lib/clients";
 import { onlyDigits } from "@/lib/format";
@@ -16,8 +17,10 @@ export type BookingInput = {
   professionalId: string; // "any" = sem preferência
   date: string;
   time: number; // minutos desde 00:00
+  /** Dados de quem agenda sem conta. Com conta logada, valem os dados da conta. */
   name: string;
   phone: string;
+  email?: string;
   notes?: string;
 };
 
@@ -27,13 +30,16 @@ const TAKEN = "Esse horário acabou de ser ocupado. Escolha outro horário, por 
 
 export async function createBooking(input: BookingInput): Promise<BookingResult> {
   const catalog = await getBookingCatalog(input.slug);
-  if (!catalog) return { error: "Barbearia não encontrada." };
+  if (!catalog) return { error: "Página de agendamento não encontrada." };
   const { shop } = catalog;
 
-  const name = input.name.trim();
-  const phone = onlyDigits(input.phone);
+  const customer = await getCustomer();
+  const name = customer?.name ?? input.name.trim();
+  const phone = customer?.phone ?? onlyDigits(input.phone);
+  const email = customer?.email ?? (input.email?.trim().toLowerCase() || null);
   if (name.length < 2) return { error: "Informe seu nome." };
   if (phone.length < 10 || phone.length > 13) return { error: "Informe seu WhatsApp com DDD." };
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { error: "Confira o e-mail informado." };
   if (!isDateStr(input.date) || !Number.isInteger(input.time)) return { error: "Escolha o dia e o horário." };
 
   const services = input.serviceIds.map((id) => catalog.services.find((s) => s.id === id));
@@ -55,7 +61,7 @@ export async function createBooking(input: BookingInput): Promise<BookingResult>
   const professional = candidates.find((p) => availability[p.id]?.includes(input.time));
   if (!professional) return { error: TAKEN };
 
-  const client = await findOrCreateClient(shop.id, name, phone);
+  const client = await findOrCreateClient(shop.id, name, phone, email);
 
   const startAt = zonedToUtc(input.date, input.time, shop.timezone);
   const endAt = new Date(startAt.getTime() + durationMin * 60_000);
@@ -70,6 +76,7 @@ export async function createBooking(input: BookingInput): Promise<BookingResult>
         shopId: shop.id,
         professionalId: professional.id,
         clientId: client.id,
+        customerId: customer?.id ?? null,
         startAt,
         endAt,
         totalCents,

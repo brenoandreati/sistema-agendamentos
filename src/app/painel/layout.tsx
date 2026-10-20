@@ -3,6 +3,7 @@ import Link from "next/link";
 import { LogOut } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import { brandStyle } from "@/lib/format";
+import { ShopMark } from "@/components/shop-mark";
 import { BRAND } from "@/config/brand";
 import { signOut } from "../(auth)/actions";
 import { BottomNav, SidebarNav } from "./nav";
@@ -15,12 +16,7 @@ export default async function PanelLayout({ children }: { children: ReactNode })
     <div style={brandStyle(shop.primaryColor)} className="flex flex-1">
       <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-r border-line bg-surface px-3 py-5 md:flex">
         <Link href="/painel" className="mb-6 flex items-center gap-2.5 px-3">
-          {shop.logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={shop.logoUrl} alt="" className="size-8 rounded-lg object-cover" />
-          ) : (
-            <span className="grid size-8 place-items-center rounded-lg bg-brand text-brand-fg">✂</span>
-          )}
+          <ShopMark shop={shop} />
           <span className="min-w-0">
             <span className="block truncate text-sm font-semibold">{shop.name}</span>
             <span className="block text-xs text-muted">{BRAND.name}</span>
@@ -40,7 +36,7 @@ export default async function PanelLayout({ children }: { children: ReactNode })
 
       <div className="min-w-0 flex-1 pb-24 md:pb-0">
         <header className="flex items-center gap-2.5 border-b border-line bg-surface px-4 py-3 md:hidden">
-          <span className="grid size-7 place-items-center rounded-md bg-brand text-sm text-brand-fg">✂</span>
+          <ShopMark shop={shop} size="sm" />
           <span className="truncate font-semibold">{shop.name}</span>
         </header>
         <main className="mx-auto w-full max-w-6xl px-4 py-6 md:px-8 md:py-8">{children}</main>

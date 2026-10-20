@@ -4,7 +4,7 @@ import { syncMercadoPagoPayment } from "@/lib/payments";
 
 /**
  * Notificações do Mercado Pago. O conteúdo da notificação não é confiável por si só:
- * o sistema sempre consulta o pagamento na API do Mercado Pago com o token da barbearia.
+ * o sistema sempre consulta o pagamento na API do Mercado Pago com o token do negócio.
  */
 export async function POST(request: NextRequest, { params }: RouteContext<"/api/webhooks/mercadopago/[shopId]">) {
   const { shopId } = await params;

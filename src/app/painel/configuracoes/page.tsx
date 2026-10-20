@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { CopyButton } from "@/components/copy-button";
+import { ShopMark } from "@/components/shop-mark";
 import { ActionForm, SubmitButton } from "@/components/forms";
 import { Badge, Card, Checkbox, Field, Input, Select } from "@/components/ui";
 import { PageHeader } from "@/components/ui";
@@ -34,7 +35,7 @@ export default async function SettingsPage() {
     <>
       <PageHeader title="Configurações" />
       <div className="flex max-w-3xl flex-col gap-6">
-        <Section title="Barbearia" description="Esses dados aparecem para o cliente na página de agendamento.">
+        <Section title="Seu negócio" description="Esses dados aparecem para o cliente na página de agendamento.">
           <ActionForm action={saveShopInfo} className="flex flex-col gap-4">
             <Field label="Nome">
               <Input name="name" defaultValue={shop.name} required />
@@ -57,7 +58,7 @@ export default async function SettingsPage() {
                 <Input name="phone" type="tel" defaultValue={shop.phone ? formatPhone(shop.phone) : ""} />
               </Field>
               <Field label="Instagram">
-                <Input name="instagram" defaultValue={shop.instagram ?? ""} placeholder="@suabarbearia" />
+                <Input name="instagram" defaultValue={shop.instagram ?? ""} placeholder="@seunegocio" />
               </Field>
             </div>
             <Field label="Endereço">
@@ -76,12 +77,7 @@ export default async function SettingsPage() {
                 <Input name="primaryColor" type="color" defaultValue={shop.primaryColor} className="w-20 cursor-pointer p-1" />
               </Field>
               <div className="flex items-center gap-3">
-                {shop.logoUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={shop.logoUrl} alt="Logo atual" className="size-14 rounded-xl border border-line object-cover" />
-                ) : (
-                  <span className="grid size-14 place-items-center rounded-xl bg-brand text-xl text-brand-fg">✂</span>
-                )}
+                <ShopMark shop={shop} size="xl" />
                 <Field label="Logo" hint="PNG, JPG ou WebP, até 300 KB. De preferência quadrado.">
                   <Input name="logo" type="file" accept="image/png,image/jpeg,image/webp" className="py-1.5" />
                 </Field>
@@ -134,8 +130,8 @@ export default async function SettingsPage() {
             <fieldset className="flex flex-col gap-2">
               <legend className="mb-2 text-sm font-medium">Quanto o cliente paga ao agendar</legend>
               <Radio name="paymentMode" value="FULL" defaultChecked={shop.paymentMode === "FULL"} label="Valor total" hint="O horário só é confirmado depois do pagamento." />
-              <Radio name="paymentMode" value="DEPOSIT" defaultChecked={shop.paymentMode === "DEPOSIT"} label="Um sinal (parte do valor)" hint="O restante é pago na barbearia." />
-              <Radio name="paymentMode" value="NONE" defaultChecked={shop.paymentMode === "NONE"} label="Nada online" hint="O agendamento é confirmado na hora e o cliente paga na barbearia." />
+              <Radio name="paymentMode" value="DEPOSIT" defaultChecked={shop.paymentMode === "DEPOSIT"} label="Um sinal (parte do valor)" hint="O restante é pago no local, no dia do atendimento." />
+              <Radio name="paymentMode" value="NONE" defaultChecked={shop.paymentMode === "NONE"} label="Nada online" hint="O agendamento é confirmado na hora e o cliente paga no local." />
             </fieldset>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Valor do sinal (%)" hint="Usado só quando a opção for sinal.">

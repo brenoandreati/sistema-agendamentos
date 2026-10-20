@@ -1,7 +1,7 @@
 import "server-only";
 import { db } from "./db";
 
-/** Barbearia, serviços e profissionais disponíveis no agendamento online. */
+/** Negócio, serviços e profissionais disponíveis no agendamento online. */
 export async function getBookingCatalog(slug: string) {
   const shop = await db.shop.findUnique({ where: { slug } });
   if (!shop) return null;

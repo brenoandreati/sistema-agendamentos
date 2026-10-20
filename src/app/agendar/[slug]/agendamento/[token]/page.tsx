@@ -69,7 +69,7 @@ export default async function BookingStatusPage({ params, searchParams }: PagePr
       )}
       {confirmed && appointment.totalCents > paid && (
         <div className="flex justify-between p-4 text-sm">
-          <span className="text-muted">A pagar na barbearia</span>
+          <span className="text-muted">A pagar no local</span>
           <span className="font-medium tabular-nums">{formatMoney(appointment.totalCents - paid)}</span>
         </div>
       )}
@@ -102,7 +102,7 @@ export default async function BookingStatusPage({ params, searchParams }: PagePr
           icon={<XCircle className="size-10 text-muted" />}
           title={expired ? "O tempo para pagar acabou" : appointment.status === "NO_SHOW" ? "Atendimento não realizado" : "Agendamento cancelado"}
         >
-          {expired ? "O horário foi liberado. Você pode escolher um novo horário." : "Se tiver alguma dúvida, fale com a barbearia."}
+          {expired ? "O horário foi liberado. Você pode escolher um novo horário." : `Se tiver alguma dúvida, fale com ${shop.name}.`}
         </StatusHeader>
         {summary}
         <LinkButton href={`/agendar/${shop.slug}`} className="h-12">
@@ -115,7 +115,7 @@ export default async function BookingStatusPage({ params, searchParams }: PagePr
   return (
     <div className="flex flex-col gap-4">
       <StatusHeader icon={<CircleCheck className="size-10 text-emerald-500" />} title="Agendamento confirmado!">
-        Te esperamos na {shop.name}.
+        {shop.name} te espera!
       </StatusHeader>
       {summary}
       <div className="grid gap-2 sm:grid-cols-2">
@@ -140,7 +140,7 @@ export default async function BookingStatusPage({ params, searchParams }: PagePr
             rel="noreferrer"
             className={buttonClass("secondary", "md", "h-11")}
           >
-            <MessageCircle className="size-4" aria-hidden /> Falar com a barbearia
+            <MessageCircle className="size-4" aria-hidden /> Falar no WhatsApp
           </a>
         )}
       </div>

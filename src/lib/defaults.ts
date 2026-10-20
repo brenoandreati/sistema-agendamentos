@@ -8,10 +8,4 @@ export function defaultWorkingHours() {
   return hours;
 }
 
-export const DEFAULT_SERVICES = [
-  { name: "Corte", durationMin: 30, priceCents: 4000, sortOrder: 0 },
-  { name: "Barba", durationMin: 30, priceCents: 3000, sortOrder: 1 },
-  { name: "Corte + barba", durationMin: 60, priceCents: 6500, sortOrder: 2 },
-];
-
 export const PROFESSIONAL_COLORS = ["#b45309", "#0f766e", "#7c3aed", "#be123c", "#1d4ed8", "#4d7c0f", "#a21caf", "#334155"];

@@ -1,7 +1,9 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AtSign, MapPin, MessageCircle } from "lucide-react";
+import { AtSign, CircleUserRound, MapPin, MessageCircle } from "lucide-react";
+import { ShopMark } from "@/components/shop-mark";
+import { getCustomer } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { brandStyle, formatPhone, whatsappLink } from "@/lib/format";
 import { BRAND } from "@/config/brand";
@@ -14,7 +16,7 @@ export async function generateMetadata({ params }: LayoutProps<"/agendar/[slug]"
 
 export default async function PublicShopLayout({ children, params }: LayoutProps<"/agendar/[slug]"> & { children: ReactNode }) {
   const { slug } = await params;
-  const shop = await db.shop.findUnique({ where: { slug } });
+  const [shop, customer] = await Promise.all([db.shop.findUnique({ where: { slug } }), getCustomer()]);
   if (!shop) notFound();
 
   return (
@@ -22,12 +24,7 @@ export default async function PublicShopLayout({ children, params }: LayoutProps
       <header className="border-b border-line bg-surface">
         <div className="mx-auto flex w-full max-w-2xl items-center gap-3 px-4 py-4">
           <Link href={`/agendar/${shop.slug}`}>
-            {shop.logoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={shop.logoUrl} alt="" className="size-12 rounded-xl object-cover" />
-            ) : (
-              <span className="grid size-12 place-items-center rounded-xl bg-brand text-xl text-brand-fg">✂</span>
-            )}
+            <ShopMark shop={shop} size="lg" />
           </Link>
           <div className="min-w-0 flex-1">
             <h1 className="truncate text-lg font-semibold">{shop.name}</h1>
@@ -49,6 +46,13 @@ export default async function PublicShopLayout({ children, params }: LayoutProps
               )}
             </div>
           </div>
+          <Link
+            href={`/cliente?voltar=/agendar/${shop.slug}`}
+            className="flex shrink-0 flex-col items-center gap-0.5 text-xs text-muted hover:text-fg"
+          >
+            <CircleUserRound className="size-6" aria-hidden />
+            {customer ? customer.name.split(" ")[0] : "Entrar"}
+          </Link>
         </div>
       </header>
       <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-6">{children}</main>

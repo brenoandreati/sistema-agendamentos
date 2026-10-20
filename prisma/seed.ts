@@ -43,6 +43,7 @@ async function main() {
 
   const shop = await db.shop.create({
     data: {
+      niche: "BARBER",
       name: "Barbearia Exemplo",
       slug: SLUG,
       phone: "11912345678",

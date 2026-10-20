@@ -94,7 +94,7 @@ export async function deleteProfessional(_: ActionState, form: FormData): Promis
   if (professional._count.appointments > 0) {
     await db.professional.update({ where: { id }, data: { active: false, bookableOnline: false } });
   } else {
-    if ((await db.professional.count({ where: { shopId } })) <= 1) return fail("A barbearia precisa ter pelo menos um profissional.");
+    if ((await db.professional.count({ where: { shopId } })) <= 1) return fail("É preciso ter pelo menos um profissional.");
     await db.professional.delete({ where: { id } });
   }
   revalidatePath("/painel", "layout");

@@ -1,4 +1,4 @@
-// Datas de calendário circulam como "YYYY-MM-DD" no fuso da barbearia.
+// Datas de calendário circulam como "YYYY-MM-DD" no fuso do negócio.
 // Horários do dia circulam como minutos desde 00:00 (ex.: 9h30 = 570).
 
 const partsFormatters = new Map<string, Intl.DateTimeFormat>();

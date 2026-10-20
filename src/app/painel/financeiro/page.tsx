@@ -126,7 +126,7 @@ export default async function FinancePage({ searchParams }: PageProps<"/painel/f
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-medium">{p.client?.name ?? "Sem cliente"}</p>
                       <p className="truncate text-sm text-muted">
-                        {label} · {p.method ? PAYMENT_METHOD[p.method] : "Online"} · {p.channel === "ONLINE" ? "online" : "na barbearia"}
+                        {label} · {p.method ? PAYMENT_METHOD[p.method] : "Online"} · {p.channel === "ONLINE" ? "online" : "presencial"}
                       </p>
                     </div>
                     <p className="font-semibold tabular-nums">{formatMoney(p.amountCents)}</p>
@@ -218,7 +218,7 @@ export default async function FinancePage({ searchParams }: PageProps<"/painel/f
               <span className="font-medium tabular-nums">{formatMoney(report.online)}</span>
             </div>
             <div className="flex justify-between py-1">
-              <span className="text-muted">Na barbearia</span>
+              <span className="text-muted">Presencial</span>
               <span className="font-medium tabular-nums">{formatMoney(report.inPerson)}</span>
             </div>
           </Card>

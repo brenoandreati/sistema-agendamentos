@@ -7,7 +7,7 @@ import { createPreference, getPayment, toPaymentMethod } from "./mercadopago";
 
 export { onlineAmountCents } from "./pricing";
 
-/** Token do Mercado Pago da barbearia (ou o padrão do servidor). Sem token, o sistema usa o modo demonstração. */
+/** Token do Mercado Pago do negócio (ou o padrão do servidor). Sem token, o sistema usa o modo demonstração. */
 export async function mercadoPagoToken(shop: Pick<Shop, "mpAccessToken">): Promise<string | null> {
   if (shop.mpAccessToken) {
     const token = await decryptSecret(shop.mpAccessToken);

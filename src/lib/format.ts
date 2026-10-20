@@ -78,7 +78,7 @@ export function readableTextColor(hex: string): string {
   return luminance > 0.4 ? "#111111" : "#ffffff";
 }
 
-/** Variáveis CSS que aplicam a cor da barbearia nos componentes. */
+/** Variáveis CSS que aplicam a cor do negócio nos componentes. */
 export function brandStyle(color: string) {
   return { "--brand": color, "--brand-fg": readableTextColor(color) } as CSSProperties;
 }
