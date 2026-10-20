@@ -1,0 +1,20 @@
+import type { MetadataRoute } from "next";
+import { BRAND } from "@/config/brand";
+
+export default function manifest(): MetadataRoute.Manifest {
+  return {
+    name: BRAND.name,
+    short_name: BRAND.name,
+    description: BRAND.tagline,
+    start_url: "/painel",
+    display: "standalone",
+    background_color: "#f5f5f3",
+    theme_color: "#b45309",
+    lang: "pt-BR",
+    icons: [
+      { src: "/icon.svg", sizes: "any", type: "image/svg+xml" },
+      { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+    ],
+  };
+}

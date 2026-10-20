@@ -1,0 +1,242 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  OWNER
+  STAFF
+}
+
+/// Como o cliente paga ao agendar pela página pública.
+enum PaymentMode {
+  FULL // paga o valor total online
+  DEPOSIT // paga um sinal online e o resto na barbearia
+  NONE // não paga online, só na barbearia
+}
+
+enum AppointmentStatus {
+  PENDING_PAYMENT // horário reservado aguardando pagamento online
+  CONFIRMED
+  COMPLETED
+  NO_SHOW
+  CANCELED
+  EXPIRED // reserva expirou sem pagamento
+}
+
+enum AppointmentSource {
+  ONLINE
+  MANUAL
+}
+
+enum PaymentMethod {
+  PIX
+  CREDIT_CARD
+  DEBIT_CARD
+  CASH
+  OTHER
+}
+
+enum PaymentChannel {
+  ONLINE
+  IN_PERSON
+}
+
+enum PaymentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  REFUNDED
+  CANCELED
+}
+
+model Shop {
+  id              String      @id @default(cuid())
+  name            String
+  slug            String      @unique
+  phone           String?
+  address         String?
+  instagram       String?
+  logoUrl         String?
+  primaryColor    String      @default("#b45309")
+  timezone        String      @default("America/Sao_Paulo")
+  slotIntervalMin Int         @default(30)
+  minNoticeMin    Int         @default(60)
+  maxAdvanceDays  Int         @default(30)
+  paymentMode     PaymentMode @default(FULL)
+  depositPercent  Int         @default(30)
+  paymentHoldMin  Int         @default(20)
+  /// Token do Mercado Pago criptografado com AUTH_SECRET.
+  mpAccessToken   String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  users         User[]
+  professionals Professional[]
+  services      Service[]
+  clients       Client[]
+  appointments  Appointment[]
+  timeBlocks    TimeBlock[]
+  payments      Payment[]
+}
+
+model User {
+  id           String   @id @default(cuid())
+  shopId       String
+  shop         Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(OWNER)
+  createdAt    DateTime @default(now())
+}
+
+model Professional {
+  id             String   @id @default(cuid())
+  shopId         String
+  shop           Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  name           String
+  phone          String?
+  color          String   @default("#b45309")
+  active         Boolean  @default(true)
+  bookableOnline Boolean  @default(true)
+  sortOrder      Int      @default(0)
+  createdAt      DateTime @default(now())
+
+  workingHours WorkingHour[]
+  services     Service[]
+  appointments Appointment[]
+  timeBlocks   TimeBlock[]
+
+  @@index([shopId])
+}
+
+/// Um intervalo de trabalho num dia da semana. Um dia pode ter mais de um (ex.: antes e depois do almoço).
+model WorkingHour {
+  id             String       @id @default(cuid())
+  professionalId String
+  professional   Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+  weekday        Int // 0 = domingo ... 6 = sábado
+  startMin       Int // minutos desde 00:00
+  endMin         Int
+
+  @@index([professionalId, weekday])
+}
+
+/// Horário bloqueado na agenda (folga, compromisso, etc.).
+model TimeBlock {
+  id             String       @id @default(cuid())
+  shopId         String
+  shop           Shop         @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  professionalId String
+  professional   Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+  startAt        DateTime
+  endAt          DateTime
+  reason         String?
+  createdAt      DateTime     @default(now())
+
+  @@index([professionalId, startAt])
+}
+
+model Service {
+  id          String   @id @default(cuid())
+  shopId      String
+  shop        Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  durationMin Int
+  priceCents  Int
+  active      Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  professionals Professional[]
+  appointments  AppointmentService[]
+
+  @@index([shopId])
+}
+
+model Client {
+  id        String   @id @default(cuid())
+  shopId    String
+  shop      Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  name      String
+  phone     String
+  email     String?
+  notes     String?
+  createdAt DateTime @default(now())
+
+  appointments Appointment[]
+  payments     Payment[]
+
+  @@unique([shopId, phone])
+}
+
+model Appointment {
+  id             String            @id @default(cuid())
+  shopId         String
+  shop           Shop              @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  professionalId String
+  professional   Professional      @relation(fields: [professionalId], references: [id])
+  clientId       String
+  client         Client            @relation(fields: [clientId], references: [id])
+  startAt        DateTime
+  endAt          DateTime
+  status         AppointmentStatus @default(CONFIRMED)
+  source         AppointmentSource @default(MANUAL)
+  totalCents     Int
+  notes          String?
+  /// Até quando o horário fica reservado esperando o pagamento online.
+  holdExpiresAt  DateTime?
+  /// Token para o cliente acompanhar o agendamento sem login.
+  publicToken    String            @unique @default(uuid())
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  services AppointmentService[]
+  payments Payment[]
+
+  @@index([shopId, startAt])
+  @@index([professionalId, startAt])
+}
+
+/// Serviço dentro de um agendamento. Nome, preço e duração são copiados para manter o histórico.
+model AppointmentService {
+  id            String      @id @default(cuid())
+  appointmentId String
+  appointment   Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  serviceId     String?
+  service       Service?    @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+  name          String
+  durationMin   Int
+  priceCents    Int
+}
+
+model Payment {
+  id                String         @id @default(cuid())
+  shopId            String
+  shop              Shop           @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  appointmentId     String?
+  appointment       Appointment?   @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  clientId          String?
+  client            Client?        @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  amountCents       Int
+  method            PaymentMethod?
+  channel           PaymentChannel
+  status            PaymentStatus  @default(PENDING)
+  description       String?
+  /// "mercadopago" ou "demo" para pagamentos online.
+  provider          String?
+  providerPaymentId String?
+  checkoutUrl       String?
+  paidAt            DateTime?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  @@index([shopId, paidAt])
+  @@index([appointmentId])
+}
