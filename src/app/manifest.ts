@@ -4,7 +4,7 @@ import { BRAND } from "@/config/brand";
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: BRAND.name,
-    short_name: BRAND.name,
+    short_name: BRAND.shortName,
     description: BRAND.tagline,
     start_url: "/painel",
     display: "standalone",

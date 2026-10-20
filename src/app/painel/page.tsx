@@ -22,7 +22,7 @@ export default async function DashboardPage() {
   const { start, end } = dayRange(today, tz);
   await expireStaleHolds(shop.id);
 
-  const [appointments, receivedToday, receivedMonth, awaitingPayment] = await Promise.all([
+  const [appointments, receivedToday, receivedMonth] = await Promise.all([
     db.appointment.findMany({
       where: { shopId: shop.id, startAt: { gte: start, lt: end }, status: { notIn: ["CANCELED", "EXPIRED"] } },
       include: appointmentInclude,
@@ -36,10 +36,10 @@ export default async function DashboardPage() {
       where: { shopId: shop.id, status: "APPROVED", paidAt: { gte: zonedToUtc(startOfMonth(today), 0, tz), lt: end } },
       _sum: { amountCents: true },
     }),
-    db.appointment.count({ where: { shopId: shop.id, status: "PENDING_PAYMENT" } }),
   ]);
 
   const now = new Date();
+  const awaitingPayment = appointments.filter((a) => a.status === "PENDING_PAYMENT").length;
   const upcoming = appointments.filter((a) => a.endAt > now && a.status !== "COMPLETED");
   const toReceive = appointments
     .filter((a) => a.status === "CONFIRMED" || a.status === "COMPLETED")
@@ -97,7 +97,7 @@ export default async function DashboardPage() {
               </a>
             </div>
           </Card>
-          {!mercadoPagoToken(shop) && shop.paymentMode !== "NONE" && (
+          {!(await mercadoPagoToken(shop)) && shop.paymentMode !== "NONE" && (
             <Card className="border-amber-500/40 p-5">
               <h2 className="font-semibold">Conecte o Mercado Pago</h2>
               <p className="mt-1 mb-3 text-sm text-muted">

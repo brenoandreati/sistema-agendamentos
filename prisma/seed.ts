@@ -1,11 +1,12 @@
 // Cria uma barbearia de demonstração com agenda e pagamentos dos últimos 30 dias.
 // Uso: npm run db:seed   (login: demo@exemplo.com / 123456)
 import { PrismaClient, type PaymentMethod } from "@prisma/client";
-import bcrypt from "bcryptjs";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { hashPassword } from "../src/lib/password";
 import { defaultWorkingHours } from "../src/lib/defaults";
 import { addDays, todayStr, weekdayOf, zonedToUtc } from "../src/lib/time";
 
-const db = new PrismaClient();
+const db = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }) });
 const TZ = "America/Sao_Paulo";
 const SLUG = "exemplo";
 
@@ -49,7 +50,7 @@ async function main() {
       instagram: "barbeariaexemplo",
       paymentMode: "FULL",
       users: {
-        create: { name: "Carlos", email: "demo@exemplo.com", passwordHash: await bcrypt.hash("123456", 10), role: "OWNER" },
+        create: { name: "Carlos", email: "demo@exemplo.com", passwordHash: await hashPassword("123456"), role: "OWNER" },
       },
     },
   });

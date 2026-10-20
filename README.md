@@ -1,16 +1,17 @@
-# Navalha: agenda online e financeiro para barbearias
+# Arvan Agendamentos
 
-Sistema de agendamento para barbearias, no estilo do InBarber, com pagamento online na hora de agendar e controle financeiro.
+Agenda online e financeiro para barbearias, com pagamento por Pix ou cartão na hora de agendar. Roda no **Cloudflare**.
 
-> "Navalha" é um nome provisório. Para trocar o nome e o slogan, edite `src/config/brand.ts`.
+> Para trocar o nome ou o slogan do sistema, edite `src/config/brand.ts`.
 > A cor e o logo de cada barbearia são configurados dentro do sistema, em **Configurações**.
 
 ## O que o sistema faz
 
 **Para o cliente (página pública `/agendar/<sua-barbearia>`)**
 - Escolhe um ou mais serviços, o barbeiro (ou "sem preferência"), o dia e o horário livre.
-- Paga por **Pix ou cartão pelo Mercado Pago** para confirmar o horário. O valor pode ser o total, um sinal (%) ou nada online.
+- Paga por **Pix ou cartão pelo Mercado Pago** para confirmar. O valor pode ser o total, um sinal (%) ou nada online.
 - O horário fica reservado por alguns minutos enquanto ele paga. Se não pagar, o horário volta a ficar livre.
+- Se duas pessoas tentam o mesmo horário ao mesmo tempo, só uma consegue. A outra recebe um aviso para escolher outro horário.
 - Recebe a confirmação na tela, com botão para salvar na agenda do celular e falar com a barbearia no WhatsApp.
 
 **Para a barbearia (painel `/painel`)**
@@ -21,62 +22,118 @@ Sistema de agendamento para barbearias, no estilo do InBarber, com pagamento onl
 - **Financeiro** por dia, semana, mês e ano:
   - quanto entrou e a comparação com o período anterior;
   - quanto falta receber e ticket médio;
-  - gráfico do que entrou por dia ou por mês;
+  - gráfico do que entrou;
   - **quem pagou** e **quem ainda não pagou**;
   - divisão por forma de pagamento e entre online e na barbearia.
 - Registro de pagamento na barbearia (Pix, dinheiro, débito, crédito) e **entradas avulsas** (cliente sem agendamento).
 - **Exportar planilha** (CSV que abre direto no Excel).
 - Funciona no celular e pode ser instalado na tela inicial, como um app.
 
-## Como rodar no seu computador
+---
 
-Você precisa do [Node.js 20+](https://nodejs.org) e de um banco PostgreSQL. Pode ser local ou gratuito na nuvem, como [Neon](https://neon.tech) ou [Supabase](https://supabase.com).
+## Como colocar no ar no Cloudflare (passo a passo)
+
+Você vai precisar de duas contas gratuitas:
+- **Neon**, que guarda o banco de dados;
+- **Cloudflare**, que roda o sistema.
+
+Leva uns 15 minutos e não precisa instalar nada no computador.
+
+### 1. Criar o banco de dados no Neon
+
+1. Entre em https://neon.tech e crie uma conta. Dá para entrar com Google ou GitHub.
+2. Crie um projeto:
+   - **Nome:** `arvan`
+   - **Região:** **AWS São Paulo (sa-east-1)**. Fica mais rápido para clientes no Brasil.
+3. Na tela do projeto, clique em **Connect**, deixe a opção **Connection pooling** ligada e copie o endereço.
+   Ele começa com `postgresql://` e termina com `?sslmode=require`.
+   Guarde esse endereço: ele é o seu **DATABASE_URL**.
+
+### 2. Gerar a chave secreta do sistema
+
+Crie uma senha aleatória e comprida, com pelo menos 40 letras e números misturados. Ela protege o login e o token do Mercado Pago.
+- Pode usar um gerador de senhas, como https://1password.com/password-generator.
+- Ou, num computador com terminal, rode `openssl rand -hex 32`.
+
+Guarde essa senha: ela é o seu **AUTH_SECRET**.
+
+### 3. Publicar no Cloudflare
+
+1. Entre em https://dash.cloudflare.com e crie uma conta.
+2. No menu lateral, abra **Compute (Workers)** → **Workers & Pages** → **Create** → **Import a repository**.
+3. Conecte sua conta do GitHub e escolha o repositório **sistema-agendamentos**.
+4. Preencha as configurações:
+   | Campo | Valor |
+   |---|---|
+   | Project name | `arvan-agendamentos` (precisa ser exatamente esse) |
+   | Build command | `npx prisma migrate deploy && npx opennextjs-cloudflare build` |
+   | Deploy command | `npx opennextjs-cloudflare deploy` |
+5. Abra **Advanced settings → Build variables** e adicione:
+   - `DATABASE_URL`, com o endereço do Neon. O build usa esse endereço para criar as tabelas no banco.
+6. Clique em **Deploy** e espere terminar. Leva uns 3 minutos.
+7. Quando terminar, o Cloudflare mostra o endereço do sistema, algo como `https://arvan-agendamentos.SEU-USUARIO.workers.dev`. Copie esse endereço.
+8. Abra o Worker `arvan-agendamentos` → **Settings** → **Variables and Secrets** → **Add**. Adicione os três como **Secret**:
+   | Nome | Valor |
+   |---|---|
+   | `DATABASE_URL` | o endereço do Neon |
+   | `AUTH_SECRET` | a chave secreta do passo 2 |
+   | `APP_URL` | o endereço do sistema, ex.: `https://arvan-agendamentos.SEU-USUARIO.workers.dev` |
+9. Salve (**Deploy**). Pronto: abra o endereço, clique em **Criar conta** e cadastre sua barbearia.
+
+Daqui para frente, toda alteração enviada ao GitHub é publicada sozinha pelo Cloudflare.
+
+**Domínio próprio (opcional):** se o seu domínio já estiver no Cloudflare, abra o Worker → **Settings** → **Domains & Routes** → **Add** → **Custom domain** e digite, por exemplo, `agenda.arvan.com.br`. Depois troque o `APP_URL` para esse endereço.
+
+**Banco mais rápido (opcional):** crie um **Hyperdrive** em **Storage & Databases → Hyperdrive**, usando o endereço do Neon. Depois adicione no `wrangler.jsonc`:
+
+```jsonc
+"hyperdrive": [{ "binding": "HYPERDRIVE", "id": "<id do hyperdrive>" }]
+```
+
+O sistema passa a usar o Hyperdrive automaticamente.
+
+**Plano do Cloudflare:** o sistema cabe no plano gratuito, com 2,2 MB de um limite de 3 MB. O plano gratuito limita o processamento de cada acesso. Se aparecer o **erro 1102** em algum momento de uso intenso, ative o plano **Workers Paid** (US$ 5 por mês) em **Workers & Pages → Plans**.
+
+### 4. Ligar o pagamento online (Mercado Pago)
+
+Sem token do Mercado Pago, o sistema funciona em **modo demonstração**: o cliente vê uma tela que simula o pagamento e nada é cobrado. Não divulgue o link para clientes nesse modo. Ou conecte o Mercado Pago, ou escolha "Nada online" em Configurações.
+
+Para cobrar de verdade:
+1. Acesse https://www.mercadopago.com.br/developers/panel/app e crie uma aplicação do tipo **Checkout Pro**.
+2. Copie o **Access Token de produção**. Ele começa com `APP_USR-`.
+3. No sistema, abra **Configurações → Pagamento online**, cole o token e salve.
+
+O dinheiro cai direto na conta do Mercado Pago da barbearia. O sistema confirma o pagamento de duas formas:
+- quando o cliente volta do checkout;
+- pelo aviso automático que o Mercado Pago envia para `/api/webhooks/mercadopago/<id-da-barbearia>`.
+
+---
+
+## Rodar no seu computador (para desenvolver)
+
+Você precisa do [Node.js 20+](https://nodejs.org) e de um banco PostgreSQL. Pode ser o próprio Neon.
 
 ```bash
 npm install
 cp .env.example .env        # preencha DATABASE_URL e AUTH_SECRET
 npm run db:migrate          # cria as tabelas
 npm run db:seed             # opcional: barbearia de exemplo com 30 dias de dados
-npm run dev
+npm run dev                 # abre em http://localhost:3000
 ```
 
-Abra http://localhost:3000.
-- Para criar uma conta nova, use **Criar conta**.
 - Para entrar na barbearia de exemplo, use o e-mail `demo@exemplo.com` e a senha `123456`.
-- A página de agendamento da barbearia de exemplo fica em http://localhost:3000/agendar/exemplo.
+- A página de agendamento dela fica em `/agendar/exemplo`.
 
-## Pagamento online (Mercado Pago)
-
-Sem token do Mercado Pago, o sistema funciona em **modo demonstração**: o cliente vê uma tela que simula o pagamento e nada é cobrado. É o jeito de testar tudo antes de ligar a cobrança.
-
-Para cobrar de verdade:
-1. Crie uma conta no Mercado Pago e acesse **Suas integrações**: https://www.mercadopago.com.br/developers/panel/app.
-2. Crie uma aplicação do tipo *Checkout Pro* e copie o **Access Token de produção** (começa com `APP_USR-`).
-3. No sistema, abra **Configurações → Pagamento online**, cole o token e salve.
-
-O dinheiro cai direto na conta do Mercado Pago da barbearia. O sistema confirma o pagamento de duas formas:
-- quando o cliente volta do checkout;
-- pelo aviso automático (webhook) que o Mercado Pago envia para `/api/webhooks/mercadopago/<id-da-barbearia>`.
-
-O webhook só funciona com o sistema publicado em um endereço `https://`.
-
-## Publicar na internet
-
-A forma mais simples é a [Vercel](https://vercel.com) com um banco no [Neon](https://neon.tech):
-1. Suba este repositório no GitHub e importe o projeto na Vercel.
-2. Configure as variáveis de ambiente:
-   - `DATABASE_URL`;
-   - `AUTH_SECRET`, gerado com `openssl rand -hex 32`;
-   - `APP_URL`, com o endereço do site, ex.: `https://agenda.suabarbearia.com.br`.
-3. Antes do primeiro acesso, rode `npm run db:deploy` (aplica as tabelas no banco de produção).
+Para testar exatamente como vai rodar no Cloudflare, copie `.dev.vars.example` para `.dev.vars` e rode `npm run preview`. O sistema abre em http://localhost:8787.
 
 ## Comandos
 
 | Comando | Para quê |
 |---|---|
 | `npm run dev` | Rodar em modo desenvolvimento |
-| `npm run build` / `npm start` | Gerar e rodar a versão de produção |
-| `npm test` | Testes da lógica de horários, datas, períodos e valores |
+| `npm run preview` | Rodar localmente no mesmo motor do Cloudflare |
+| `npm run deploy` | Publicar no Cloudflare pelo terminal (precisa do `npx wrangler login` antes) |
+| `npm test` | Testes da lógica de horários, datas, períodos, valores e senhas |
 | `npm run lint` / `npm run typecheck` | Verificar o código |
 | `npm run db:migrate` | Criar ou alterar tabelas (desenvolvimento) |
 | `npm run db:deploy` | Aplicar as tabelas em produção |
@@ -87,7 +144,10 @@ A forma mais simples é a [Vercel](https://vercel.com) com um banco no [Neon](ht
 ```
 prisma/schema.prisma        tabelas: barbearia, usuários, profissionais, horários, serviços,
                             clientes, agendamentos, bloqueios e pagamentos
+wrangler.jsonc              configuração do Cloudflare Workers
+open-next.config.ts         configuração do adaptador Next.js → Cloudflare
 src/config/brand.ts         nome e slogan do sistema
+src/lib/db.ts               conexão com o banco (uma por acesso no Cloudflare)
 src/lib/availability.ts     cálculo dos horários livres (com testes)
 src/lib/scheduling.ts       agenda: horários livres, conflitos e reservas expiradas
 src/lib/payments.ts         cobrança online e confirmação de pagamentos
@@ -99,5 +159,10 @@ src/app/painel/             painel da barbearia (agenda, financeiro, cadastros, 
 
 ## Tecnologia
 
-Next.js 16 (App Router, Server Actions), React 19, TypeScript, Tailwind CSS 4, Prisma 6 e PostgreSQL.
-O login usa sessão em cookie assinado (JWT) e senha com bcrypt. O token do Mercado Pago fica criptografado no banco (AES-256-GCM).
+- Next.js 16 (App Router, Server Actions), React 19, TypeScript e Tailwind CSS 4.
+- Prisma 6 com o driver `pg` e banco PostgreSQL.
+- Publicado no Cloudflare Workers pelo [OpenNext](https://opennext.js.org/cloudflare).
+- Segurança:
+  - o login usa sessão em cookie assinado (JWT);
+  - as senhas são guardadas com PBKDF2;
+  - o token do Mercado Pago fica criptografado no banco (AES-256-GCM).

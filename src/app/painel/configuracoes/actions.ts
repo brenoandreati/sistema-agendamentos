@@ -1,10 +1,10 @@
 "use server";
 
-import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { encryptSecret } from "@/lib/crypto";
+import { hashPassword, verifyPassword } from "@/lib/password";
 import { fail, int, optionalText, text, type ActionState } from "@/lib/action";
 import { isHexColor, onlyDigits, slugify } from "@/lib/format";
 import { getAccount, MercadoPagoError } from "@/lib/mercadopago";
@@ -97,7 +97,7 @@ export async function savePaymentSettings(_: ActionState, form: FormData): Promi
           : "Não foi possível falar com o Mercado Pago agora. Tente de novo em instantes.",
       );
     }
-    mpAccessToken = encryptSecret(token);
+    mpAccessToken = await encryptSecret(token);
   }
 
   await db.shop.update({
@@ -117,8 +117,8 @@ export async function changePassword(_: ActionState, form: FormData): Promise<Ac
   const user = await requireUser();
   const current = text(form, "current");
   const next = text(form, "next");
-  if (!(await bcrypt.compare(current, user.passwordHash))) return fail("A senha atual está incorreta.");
+  if (!(await verifyPassword(current, user.passwordHash))) return fail("A senha atual está incorreta.");
   if (next.length < 6) return fail("A nova senha precisa ter pelo menos 6 caracteres.");
-  await db.user.update({ where: { id: user.id }, data: { passwordHash: await bcrypt.hash(next, 10) } });
+  await db.user.update({ where: { id: user.id }, data: { passwordHash: await hashPassword(next) } });
   return { ok: true, message: "Senha alterada." };
 }

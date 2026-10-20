@@ -1,9 +1,9 @@
 "use server";
 
-import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { createSession, destroySession } from "@/lib/auth";
+import { hashPassword, verifyPassword } from "@/lib/password";
 import { fail, optionalText, text, type ActionState } from "@/lib/action";
 import { onlyDigits, slugify } from "@/lib/format";
 import { DEFAULT_SERVICES, defaultWorkingHours } from "@/lib/defaults";
@@ -31,7 +31,7 @@ export async function signUp(_: ActionState, form: FormData): Promise<ActionStat
     return fail("Já existe uma conta com esse e-mail. Faça login.");
   }
 
-  const passwordHash = await bcrypt.hash(password, 10);
+  const passwordHash = await hashPassword(password);
   const shop = await db.shop.create({
     data: {
       name: shopName,
@@ -65,7 +65,7 @@ export async function signIn(_: ActionState, form: FormData): Promise<ActionStat
   const email = text(form, "email").toLowerCase();
   const password = text(form, "password");
   const user = await db.user.findUnique({ where: { email } });
-  if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
+  if (!user || !(await verifyPassword(password, user.passwordHash))) {
     return fail("E-mail ou senha incorretos.");
   }
   await createSession({ userId: user.id, shopId: user.shopId });

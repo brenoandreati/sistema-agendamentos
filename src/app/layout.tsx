@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   title: { default: BRAND.name, template: `%s · ${BRAND.name}` },
   description: BRAND.tagline,
   applicationName: BRAND.name,
-  appleWebApp: { capable: true, title: BRAND.name, statusBarStyle: "default" },
+  appleWebApp: { capable: true, title: BRAND.shortName, statusBarStyle: "default" },
   icons: { icon: "/icon.svg", apple: "/icon-192.png" },
 };
 

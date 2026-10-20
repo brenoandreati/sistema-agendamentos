@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import type { AppointmentStatus, PaymentMethod } from "@prisma/client";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
+import { findOrCreateClient } from "@/lib/clients";
 import { fail, text, type ActionState } from "@/lib/action";
 import { onlyDigits, PAYMENT_METHOD } from "@/lib/format";
 import { parseMoney } from "@/lib/money";
@@ -26,11 +27,7 @@ async function resolveClient(shopId: string, form: FormData) {
   const phone = onlyDigits(text(form, "clientPhone"));
   if (!name) return "Escolha um cliente ou informe o nome do cliente novo.";
   if (phone.length < 10) return "Informe o telefone do cliente com DDD.";
-  return db.client.upsert({
-    where: { shopId_phone: { shopId, phone } },
-    update: {},
-    create: { shopId, name, phone },
-  });
+  return findOrCreateClient(shopId, name, phone);
 }
 
 export async function saveAppointment(_: ActionState, form: FormData): Promise<ActionState> {

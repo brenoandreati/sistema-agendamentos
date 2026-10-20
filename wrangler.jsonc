@@ -1,0 +1,22 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "arvan-agendamentos",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "observability": {
+    "enabled": true
+  }
+  // Variáveis secretas (configure no painel do Cloudflare ou com `npx wrangler secret put NOME`):
+  //   DATABASE_URL     endereço do banco PostgreSQL (ex.: Neon)
+  //   AUTH_SECRET      chave secreta aleatória (openssl rand -hex 32)
+  //   APP_URL          endereço público do sistema, ex.: https://arvan-agendamentos.SEU-USUARIO.workers.dev
+  //   MP_ACCESS_TOKEN  opcional: token padrão do Mercado Pago
+  //
+  // Opcional, para o banco responder mais rápido: crie um Hyperdrive apontando para o banco e adicione
+  //   "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "<id do hyperdrive>" }]
+}

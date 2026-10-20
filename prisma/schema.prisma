@@ -1,5 +1,7 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  // Conecta pelo driver "pg", que funciona tanto em Node quanto no Cloudflare Workers.
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {

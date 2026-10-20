@@ -1,0 +1,4 @@
+# Variáveis usadas pelo `npm run preview` (simulação local do Cloudflare). Copie para .dev.vars
+DATABASE_URL="postgresql://barber:barber@localhost:5432/barber?schema=public"
+AUTH_SECRET="dev-secret-troque-em-producao-0123456789abcdef"
+APP_URL="http://localhost:8787"

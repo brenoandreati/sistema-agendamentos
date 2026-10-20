@@ -28,7 +28,7 @@ export default async function SettingsPage() {
   const { shop } = user;
   const bookingPath = `/agendar/${shop.slug}`;
   const hasOwnToken = Boolean(shop.mpAccessToken);
-  const paymentsLive = Boolean(mercadoPagoToken(shop));
+  const paymentsLive = Boolean(await mercadoPagoToken(shop));
 
   return (
     <>

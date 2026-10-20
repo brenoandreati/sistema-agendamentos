@@ -1,27 +1,25 @@
-import "server-only";
-import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
+import { fromBase64Url, toBase64Url } from "./encoding";
 
-// Criptografa segredos guardados no banco (ex.: token do Mercado Pago) com AES-256-GCM.
+// Criptografa segredos guardados no banco (ex.: token do Mercado Pago) com AES-256-GCM pela Web Crypto.
 
-function key() {
+async function key() {
   const secret = process.env.AUTH_SECRET;
-  if (!secret) throw new Error("Defina AUTH_SECRET no arquivo .env");
-  return createHash("sha256").update(`secrets:${secret}`).digest();
+  if (!secret) throw new Error("Defina AUTH_SECRET nas variáveis de ambiente.");
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`secrets:${secret}`));
+  return crypto.subtle.importKey("raw", digest, "AES-GCM", false, ["encrypt", "decrypt"]);
 }
 
-export function encryptSecret(plain: string): string {
-  const iv = randomBytes(12);
-  const cipher = createCipheriv("aes-256-gcm", key(), iv);
-  const encrypted = Buffer.concat([cipher.update(plain, "utf8"), cipher.final()]);
-  return [iv, cipher.getAuthTag(), encrypted].map((b) => b.toString("base64url")).join(".");
+export async function encryptSecret(plain: string): Promise<string> {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const data = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, await key(), new TextEncoder().encode(plain));
+  return `${toBase64Url(iv)}.${toBase64Url(new Uint8Array(data))}`;
 }
 
-export function decryptSecret(value: string): string | null {
+export async function decryptSecret(value: string): Promise<string | null> {
   try {
-    const [iv, tag, data] = value.split(".").map((part) => Buffer.from(part, "base64url"));
-    const decipher = createDecipheriv("aes-256-gcm", key(), iv);
-    decipher.setAuthTag(tag);
-    return Buffer.concat([decipher.update(data), decipher.final()]).toString("utf8");
+    const [iv, data] = value.split(".").map(fromBase64Url);
+    const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, await key(), data);
+    return new TextDecoder().decode(plain);
   } catch {
     return null;
   }

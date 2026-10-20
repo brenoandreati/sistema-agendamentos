@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import type { PaymentMethod } from "@prisma/client";
 import { db } from "@/lib/db";
 import { eligibleProfessionals, getBookingCatalog } from "@/lib/booking";
+import { findOrCreateClient } from "@/lib/clients";
 import { onlyDigits } from "@/lib/format";
 import { approvePayment, onlineAmountCents, startCheckout } from "@/lib/payments";
 import { findConflict, getDayAvailability, lockProfessional } from "@/lib/scheduling";
@@ -54,11 +55,7 @@ export async function createBooking(input: BookingInput): Promise<BookingResult>
   const professional = candidates.find((p) => availability[p.id]?.includes(input.time));
   if (!professional) return { error: TAKEN };
 
-  const client = await db.client.upsert({
-    where: { shopId_phone: { shopId: shop.id, phone } },
-    update: {},
-    create: { shopId: shop.id, name, phone },
-  });
+  const client = await findOrCreateClient(shop.id, name, phone);
 
   const startAt = zonedToUtc(input.date, input.time, shop.timezone);
   const endAt = new Date(startAt.getTime() + durationMin * 60_000);

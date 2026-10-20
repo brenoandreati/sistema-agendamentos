@@ -8,9 +8,9 @@ import { createPreference, getPayment, toPaymentMethod } from "./mercadopago";
 export { onlineAmountCents } from "./pricing";
 
 /** Token do Mercado Pago da barbearia (ou o padrão do servidor). Sem token, o sistema usa o modo demonstração. */
-export function mercadoPagoToken(shop: Pick<Shop, "mpAccessToken">): string | null {
+export async function mercadoPagoToken(shop: Pick<Shop, "mpAccessToken">): Promise<string | null> {
   if (shop.mpAccessToken) {
-    const token = decryptSecret(shop.mpAccessToken);
+    const token = await decryptSecret(shop.mpAccessToken);
     if (token) return token;
   }
   return process.env.MP_ACCESS_TOKEN || null;
@@ -34,7 +34,7 @@ type CheckoutInput = {
 
 /** Cria a cobrança online e devolve o link para o cliente pagar. */
 export async function startCheckout({ shop, appointment, clientName, title, amountCents }: CheckoutInput) {
-  const token = mercadoPagoToken(shop);
+  const token = await mercadoPagoToken(shop);
   const payment = await db.payment.create({
     data: {
       shopId: shop.id,
@@ -107,7 +107,7 @@ export async function approvePayment(
 
 /** Consulta um pagamento no Mercado Pago e atualiza o sistema. */
 export async function syncMercadoPagoPayment(shop: Shop, providerPaymentId: string) {
-  const token = mercadoPagoToken(shop);
+  const token = await mercadoPagoToken(shop);
   if (!token) return null;
   const remote = await getPayment(token, providerPaymentId);
   if (!remote.external_reference) return null;
