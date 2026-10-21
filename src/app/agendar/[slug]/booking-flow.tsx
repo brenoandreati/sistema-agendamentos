@@ -154,7 +154,7 @@ export function BookingFlow({
 
       {step === 0 && (
         <section>
-          <h2 className="mb-1 text-xl font-semibold">O que você vai fazer?</h2>
+          <h2 className="mb-1 font-display text-2xl font-semibold">O que você vai fazer?</h2>
           <p className="mb-4 text-sm text-muted">Pode escolher mais de um.</p>
           {services.length === 0 && <p className="text-sm text-muted">Nenhum serviço disponível para agendar no momento.</p>}
           <div className="flex flex-col gap-2">
@@ -167,7 +167,7 @@ export function BookingFlow({
                   onClick={() => toggleService(s.id)}
                   aria-pressed={active}
                   className={cn(
-                    "flex items-center gap-3 rounded-xl border bg-surface p-4 text-left transition",
+                    "flex items-center gap-3 rounded-card border bg-surface p-4 text-left transition",
                     active ? "border-brand ring-2 ring-brand/20" : "border-line hover:border-muted/50",
                   )}
                 >
@@ -194,7 +194,7 @@ export function BookingFlow({
 
       {step === 1 && (
         <section>
-          <h2 className="mb-4 text-xl font-semibold">Com quem?</h2>
+          <h2 className="mb-4 font-display text-2xl font-semibold">Com quem?</h2>
           {eligible.length === 0 ? (
             <p className="text-sm text-muted">Nenhum profissional faz todos esses serviços juntos. Volte e mude a escolha.</p>
           ) : (
@@ -229,7 +229,7 @@ export function BookingFlow({
 
       {step === 2 && (
         <section>
-          <h2 className="mb-4 text-xl font-semibold">Quando?</h2>
+          <h2 className="mb-4 font-display text-2xl font-semibold">Quando?</h2>
           <div className="-mx-4 mb-5 flex gap-2 overflow-x-auto px-4 pb-2">
             {days.map((d) => {
               const disabled = !workingDays.has(d.weekday);
@@ -241,7 +241,7 @@ export function BookingFlow({
                   disabled={disabled}
                   onClick={() => chooseDate(d.date)}
                   className={cn(
-                    "flex w-16 shrink-0 flex-col items-center rounded-xl border py-2 transition disabled:opacity-35",
+                    "flex w-16 shrink-0 flex-col items-center rounded-card border py-2 transition disabled:opacity-35",
                     active ? "border-brand bg-brand text-brand-fg" : "border-line bg-surface hover:border-muted/50",
                   )}
                 >
@@ -266,7 +266,7 @@ export function BookingFlow({
                     type="button"
                     onClick={() => chooseTime(slot)}
                     className={cn(
-                      "rounded-lg border py-2 text-sm font-medium tabular-nums transition",
+                      "rounded-control border py-2 text-sm font-medium tabular-nums transition",
                       time === slot ? "border-brand bg-brand text-brand-fg" : "border-line bg-surface hover:border-brand",
                     )}
                   >
@@ -281,7 +281,7 @@ export function BookingFlow({
 
       {step === 3 && date && time !== null && (
         <section className="flex flex-col gap-4">
-          <h2 className="text-xl font-semibold">Seus dados</h2>
+          <h2 className="font-display text-2xl font-semibold">Seus dados</h2>
           <Card className="p-4 text-sm">
             <p className="font-medium">
               {formatDateLong(date)} às {minutesToHHMM(time)}
@@ -407,7 +407,7 @@ function ChoiceButton({ active, onClick, children }: { active: boolean; onClick:
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        "flex items-center gap-3 rounded-xl border bg-surface p-3 text-left transition",
+        "flex items-center gap-3 rounded-card border bg-surface p-3 text-left transition",
         active ? "border-brand ring-2 ring-brand/20" : "border-line hover:border-muted/50",
       )}
     >
@@ -418,10 +418,10 @@ function ChoiceButton({ active, onClick, children }: { active: boolean; onClick:
 
 function PaymentNote({ mode, payNow, total, holdMin }: { mode: PaymentMode; payNow: number; total: number; holdMin: number }) {
   if (payNow <= 0) {
-    return <p className="rounded-lg bg-surface-2 p-3 text-sm">O pagamento é feito no local, no dia do atendimento.</p>;
+    return <p className="rounded-control bg-surface-2 p-3 text-sm">O pagamento é feito no local, no dia do atendimento.</p>;
   }
   return (
-    <div className="rounded-lg border border-brand/30 bg-brand/5 p-3 text-sm">
+    <div className="rounded-control border border-brand/30 bg-brand/5 p-3 text-sm">
       {mode === "DEPOSIT" ? (
         <p>
           Para garantir o horário, você paga um sinal de <b>{formatMoney(payNow)}</b> agora, por Pix ou cartão. Os{" "}

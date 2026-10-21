@@ -24,7 +24,7 @@ const sizes: Record<Size, string> = {
 
 export function buttonClass(variant: Variant = "primary", size: Size = "md", className?: string) {
   return cn(
-    "inline-flex shrink-0 items-center justify-center rounded-lg font-medium transition disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand",
+    "inline-flex shrink-0 items-center justify-center rounded-button font-medium transition disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand",
     variants[variant],
     sizes[size],
     className,
@@ -50,7 +50,7 @@ export function LinkButton({
 }
 
 const fieldClass =
-  "w-full rounded-lg border border-line bg-surface px-3 text-sm text-fg placeholder:text-muted/70 outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/25 disabled:opacity-60";
+  "w-full rounded-control border border-line bg-surface px-3 text-sm text-fg placeholder:text-muted/70 outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/25 disabled:opacity-60";
 
 export function Input({ className, ...props }: ComponentProps<"input">) {
   return <input className={cn(fieldClass, "h-10", className)} {...props} />;
@@ -97,7 +97,7 @@ export function Checkbox({ label, hint, ...props }: ComponentProps<"input"> & { 
 }
 
 export function Card({ className, ...props }: ComponentProps<"div">) {
-  return <div className={cn("rounded-xl border border-line bg-surface", className)} {...props} />;
+  return <div className={cn("rounded-card border border-line bg-surface", className)} {...props} />;
 }
 
 const tones: Record<Tone, string> = {
@@ -135,7 +135,7 @@ export function PageHeader({
             ← {back.label}
           </Link>
         )}
-        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+        <h1 className="font-display text-2xl font-semibold tracking-tight lining-nums">{title}</h1>
         {description && <p className="mt-1 text-sm text-muted">{description}</p>}
       </div>
       {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
@@ -145,7 +145,7 @@ export function PageHeader({
 
 export function EmptyState({ title, children }: { title: string; children?: ReactNode }) {
   return (
-    <div className="rounded-xl border border-dashed border-line px-6 py-10 text-center">
+    <div className="rounded-card border border-dashed border-line px-6 py-10 text-center">
       <p className="font-medium">{title}</p>
       {children && <div className="mt-2 text-sm text-muted">{children}</div>}
     </div>
@@ -156,7 +156,7 @@ export function Stat({ label, value, hint }: { label: string; value: ReactNode; 
   return (
     <Card className="p-4">
       <p className="text-sm text-muted">{label}</p>
-      <p className="mt-1 text-2xl font-semibold tracking-tight">{value}</p>
+      <p className="mt-1 font-display text-2xl font-semibold tracking-tight lining-nums">{value}</p>
       {hint && <p className="mt-1 text-xs text-muted">{hint}</p>}
     </Card>
   );

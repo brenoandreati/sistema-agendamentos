@@ -14,3 +14,8 @@ export const MORE_ITEMS: NavItem[] = [
   { href: "/painel/profissionais", label: "Profissionais", icon: UserRound },
   { href: "/painel/configuracoes", label: "Configurações", icon: Settings },
 ];
+
+/** Troca o nome do item "Profissionais" pelo nome da equipe da área (ex.: "Barbeiros"). */
+export function withTeamLabel(items: NavItem[], teamLabel: string): NavItem[] {
+  return items.map((item) => (item.href === "/painel/profissionais" ? { ...item, label: teamLabel } : item));
+}

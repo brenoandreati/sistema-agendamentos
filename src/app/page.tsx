@@ -49,7 +49,7 @@ export default function HomePage() {
 
       <section className="grid gap-4 pb-20 sm:grid-cols-3">
         {FEATURES.map((f) => (
-          <div key={f.title} className="rounded-xl border border-line bg-surface p-5">
+          <div key={f.title} className="rounded-card border border-line bg-surface p-5">
             <f.icon className="mb-3 size-6 text-brand" aria-hidden />
             <h2 className="font-semibold">{f.title}</h2>
             <p className="mt-1 text-sm text-muted">{f.text}</p>

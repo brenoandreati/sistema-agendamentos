@@ -97,7 +97,7 @@ export function AppointmentForm({
             </div>
           </div>
         ) : selectedClient ? (
-          <div className="flex items-center justify-between gap-3 rounded-lg border border-line bg-surface-2 px-3 py-2.5">
+          <div className="flex items-center justify-between gap-3 rounded-control border border-line bg-surface-2 px-3 py-2.5">
             <div>
               <p className="font-medium">{selectedClient.name}</p>
               <p className="text-sm text-muted">{formatPhone(selectedClient.phone)}</p>
@@ -110,7 +110,7 @@ export function AppointmentForm({
           <div className="flex flex-col gap-2">
             <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar por nome ou telefone" />
             {matches.length > 0 && (
-              <div className="divide-y divide-line rounded-lg border border-line">
+              <div className="divide-y divide-line rounded-control border border-line">
                 {matches.map((c) => (
                   <button
                     key={c.id}
@@ -148,7 +148,7 @@ export function AppointmentForm({
                 onClick={() => toggleService(s.id)}
                 aria-pressed={active}
                 className={cn(
-                  "flex items-center justify-between rounded-lg border px-3 py-2.5 text-left text-sm transition",
+                  "flex items-center justify-between rounded-control border px-3 py-2.5 text-left text-sm transition",
                   active ? "border-brand bg-brand/8" : "border-line hover:bg-surface-2",
                 )}
               >

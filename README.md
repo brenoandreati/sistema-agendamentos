@@ -17,6 +17,12 @@ No ar em: https://arvan-agendamentos.brenoandreati.workers.dev
   - **nail designer**;
   - **outra área**: estética, cílios, sobrancelha, maquiagem e afins.
 - O cadastro já vem com a cor, o ícone e os serviços típicos daquela área. Agenda e financeiro funcionam igual para todas.
+- Cada área tem um visual próprio no painel e na página de agendamento:
+  - **barbeiro:** menu escuro e títulos fortes;
+  - **cabeleireira:** títulos serifados e cantos bem arredondados;
+  - **nail designer:** fonte arredondada e menu colorido;
+  - **outra área:** estilo calmo, de spa.
+- A área pode ser trocada em **Configurações → Aparência**.
 
 **Para o cliente (página pública `/agendar/<seu-negocio>`)**
 - Pode agendar **sem cadastro**, só com nome e WhatsApp (e-mail opcional).
@@ -160,7 +166,8 @@ prisma/schema.prisma        tabelas: negócio, usuários, profissionais, horári
 wrangler.jsonc              configuração do Cloudflare Workers
 open-next.config.ts         configuração do adaptador Next.js → Cloudflare
 src/config/brand.ts         nome e slogan do sistema
-src/config/niches.ts        áreas de atuação (cor, ícone e serviços padrão de cada uma)
+src/config/niches.ts        áreas de atuação (cor, ícone, serviços padrão, nome da equipe e frase de boas-vindas)
+src/app/globals.css         temas visuais de cada área (fontes, cantos, fundo e menu), em [data-niche]
 src/lib/db.ts               conexão com o banco (uma por acesso no Cloudflare)
 src/lib/availability.ts     cálculo dos horários livres (com testes)
 src/lib/scheduling.ts       agenda: horários livres, conflitos e reservas expiradas

@@ -14,9 +14,9 @@ export function NicheChoice({ singleColumn = false }: { singleColumn?: boolean }
             key={niche}
             href={`/cadastro?tipo=${config.slug}`}
             style={brandStyle(config.color)}
-            className="group flex items-center gap-4 rounded-xl border border-line bg-surface p-4 text-left transition hover:border-brand hover:shadow-sm"
+            className="group flex items-center gap-4 rounded-card border border-line bg-surface p-4 text-left transition hover:border-brand hover:shadow-sm"
           >
-            <span className="grid size-12 shrink-0 place-items-center rounded-xl bg-brand text-brand-fg">
+            <span className="grid size-12 shrink-0 place-items-center rounded-card bg-brand text-brand-fg">
               <config.icon className="size-6" aria-hidden />
             </span>
             <span className="min-w-0 flex-1">

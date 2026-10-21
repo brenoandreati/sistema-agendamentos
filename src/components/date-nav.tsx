@@ -41,7 +41,7 @@ export function DateNav({
         value={date}
         aria-label="Escolher data"
         onChange={(e) => e.target.value && router.push(href(e.target.value))}
-        className="h-10 rounded-lg border border-line bg-surface px-2 text-sm"
+        className="h-10 rounded-control border border-line bg-surface px-2 text-sm"
       />
     </div>
   );

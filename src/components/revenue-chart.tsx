@@ -65,7 +65,7 @@ export function RevenueChart({ data, title }: { data: Bar[]; title: string }) {
                 )}
                 <div
                   role="tooltip"
-                  className="pointer-events-none absolute left-1/2 z-20 hidden -translate-x-1/2 rounded-lg bg-fg px-2.5 py-1.5 text-center whitespace-nowrap text-bg shadow-lg group-hover:block group-focus-visible:block"
+                  className="pointer-events-none absolute left-1/2 z-20 hidden -translate-x-1/2 rounded-control bg-fg px-2.5 py-1.5 text-center whitespace-nowrap text-bg shadow-lg group-hover:block group-focus-visible:block"
                   style={{ bottom: `calc(${(d.value / top) * 100}% + 6px)` }}
                 >
                   <span className="block text-sm font-semibold tabular-nums">{formatMoney(d.value)}</span>

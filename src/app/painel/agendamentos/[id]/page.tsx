@@ -103,7 +103,7 @@ export default async function AppointmentPage({ params }: PageProps<"/painel/age
                 </li>
               )}
             </ul>
-            {appointment.notes && <p className="mt-3 rounded-lg bg-surface-2 p-3 text-sm whitespace-pre-line">{appointment.notes}</p>}
+            {appointment.notes && <p className="mt-3 rounded-control bg-surface-2 p-3 text-sm whitespace-pre-line">{appointment.notes}</p>}
             {appointment.status === "PENDING_PAYMENT" && appointment.holdExpiresAt && (
               <p className="mt-3 text-sm text-muted">
                 O cliente tem até {formatTime(appointment.holdExpiresAt, tz)} para pagar. Depois disso o horário volta a ficar livre.

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { CopyButton } from "@/components/copy-button";
 import { ShopMark } from "@/components/shop-mark";
+import { NICHE_ORDER, NICHES } from "@/config/niches";
 import { ActionForm, SubmitButton } from "@/components/forms";
 import { Badge, Card, Checkbox, Field, Input, Select } from "@/components/ui";
 import { PageHeader } from "@/components/ui";
@@ -70,8 +71,17 @@ export default async function SettingsPage() {
           </ActionForm>
         </Section>
 
-        <Section title="Aparência" description="A cor e o logo são usados no painel e na página de agendamento.">
+        <Section title="Aparência" description="A área, a cor e o logo definem o visual do painel e da página de agendamento.">
           <ActionForm action={saveAppearance} className="flex flex-col gap-4">
+            <Field label="Área de atuação" hint="Muda o estilo do painel e da página de agendamento. Seus serviços e horários continuam iguais.">
+              <Select name="niche" defaultValue={shop.niche} className="max-w-xs">
+                {NICHE_ORDER.map((niche) => (
+                  <option key={niche} value={niche}>
+                    {NICHES[niche].choice}
+                  </option>
+                ))}
+              </Select>
+            </Field>
             <div className="flex flex-wrap items-end gap-6">
               <Field label="Cor principal">
                 <Input name="primaryColor" type="color" defaultValue={shop.primaryColor} className="w-20 cursor-pointer p-1" />
@@ -213,7 +223,7 @@ function Section({
 
 function Radio({ label, hint, ...props }: { label: string; hint: string; name: string; value: string; defaultChecked: boolean }) {
   return (
-    <label className="flex items-start gap-2.5 rounded-lg border border-line p-3 text-sm has-checked:border-brand has-checked:bg-brand/5">
+    <label className="flex items-start gap-2.5 rounded-control border border-line p-3 text-sm has-checked:border-brand has-checked:bg-brand/5">
       <input type="radio" className="mt-0.5 size-4 accent-brand" {...props} />
       <span>
         <span className="font-medium">{label}</span>

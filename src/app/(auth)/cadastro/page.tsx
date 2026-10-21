@@ -31,7 +31,7 @@ export default async function SignUpPage({ searchParams }: PageProps<"/cadastro"
     <div style={brandStyle(config.color)}>
       <Card className="p-6">
         <div className="mb-5 flex items-center gap-3">
-          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand text-brand-fg">
+          <span className="grid size-10 shrink-0 place-items-center rounded-card bg-brand text-brand-fg">
             <config.icon className="size-5" aria-hidden />
           </span>
           <div className="min-w-0 flex-1">

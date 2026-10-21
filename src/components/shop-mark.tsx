@@ -5,9 +5,9 @@ import { cn } from "./ui";
 
 const SIZES = {
   sm: { box: "size-7 rounded-md", icon: "size-4" },
-  md: { box: "size-8 rounded-lg", icon: "size-4" },
-  lg: { box: "size-12 rounded-xl", icon: "size-6" },
-  xl: { box: "size-14 rounded-xl", icon: "size-7" },
+  md: { box: "size-8 rounded-control", icon: "size-4" },
+  lg: { box: "size-12 rounded-card", icon: "size-6" },
+  xl: { box: "size-14 rounded-card", icon: "size-7" },
 };
 
 /** Logo do negócio ou, sem logo, o ícone da área de atuação na cor do negócio. */
@@ -34,7 +34,7 @@ export function ShopMark({
 /** Marca da plataforma (fora do painel de um negócio). */
 export function AppMark({ className }: { className?: string }) {
   return (
-    <span className={cn("grid size-8 place-items-center rounded-lg bg-brand text-brand-fg", className)}>
+    <span className={cn("grid size-8 place-items-center rounded-control bg-brand text-brand-fg", className)}>
       <CalendarCheck className="size-4" aria-hidden />
     </span>
   );

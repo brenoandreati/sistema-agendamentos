@@ -63,8 +63,8 @@ export function Alert({ tone, children }: { tone: "error" | "success"; children:
       role={tone === "error" ? "alert" : "status"}
       className={
         tone === "error"
-          ? "mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-700 dark:text-red-300"
-          : "mb-4 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-700 dark:text-emerald-300"
+          ? "mb-4 rounded-control border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-700 dark:text-red-300"
+          : "mb-4 rounded-control border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-700 dark:text-emerald-300"
       }
     >
       {children}

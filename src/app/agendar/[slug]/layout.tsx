@@ -20,27 +20,27 @@ export default async function PublicShopLayout({ children, params }: LayoutProps
   if (!shop) notFound();
 
   return (
-    <div style={brandStyle(shop.primaryColor)} className="flex flex-1 flex-col">
-      <header className="border-b border-line bg-surface">
+    <div style={brandStyle(shop.primaryColor)} data-niche={shop.niche} className="flex min-h-dvh flex-1 flex-col bg-bg">
+      <header className="border-b border-sidebar-line bg-sidebar text-sidebar-fg">
         <div className="mx-auto flex w-full max-w-2xl items-center gap-3 px-4 py-4">
           <Link href={`/agendar/${shop.slug}`}>
             <ShopMark shop={shop} size="lg" />
           </Link>
           <div className="min-w-0 flex-1">
-            <h1 className="truncate text-lg font-semibold">{shop.name}</h1>
-            <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-sm text-muted">
+            <h1 className="truncate font-display text-xl font-semibold">{shop.name}</h1>
+            <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-sm text-sidebar-muted">
               {shop.address && (
                 <span className="flex items-center gap-1">
                   <MapPin className="size-3.5" aria-hidden /> {shop.address}
                 </span>
               )}
               {shop.phone && (
-                <a href={whatsappLink(shop.phone)} target="_blank" rel="noreferrer" className="flex items-center gap-1 hover:text-fg">
+                <a href={whatsappLink(shop.phone)} target="_blank" rel="noreferrer" className="flex items-center gap-1 hover:text-sidebar-fg">
                   <MessageCircle className="size-3.5" aria-hidden /> {formatPhone(shop.phone)}
                 </a>
               )}
               {shop.instagram && (
-                <a href={`https://instagram.com/${shop.instagram}`} target="_blank" rel="noreferrer" className="flex items-center gap-1 hover:text-fg">
+                <a href={`https://instagram.com/${shop.instagram}`} target="_blank" rel="noreferrer" className="flex items-center gap-1 hover:text-sidebar-fg">
                   <AtSign className="size-3.5" aria-hidden /> @{shop.instagram}
                 </a>
               )}
@@ -48,7 +48,7 @@ export default async function PublicShopLayout({ children, params }: LayoutProps
           </div>
           <Link
             href={`/cliente?voltar=/agendar/${shop.slug}`}
-            className="flex shrink-0 flex-col items-center gap-0.5 text-xs text-muted hover:text-fg"
+            className="flex shrink-0 flex-col items-center gap-0.5 text-xs text-sidebar-muted hover:text-sidebar-fg"
           >
             <CircleUserRound className="size-6" aria-hidden />
             {customer ? customer.name.split(" ")[0] : "Entrar"}

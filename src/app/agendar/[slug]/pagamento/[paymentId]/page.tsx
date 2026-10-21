@@ -25,7 +25,7 @@ export default async function DemoPaymentPage({ params, searchParams }: PageProp
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-800 dark:text-amber-200">
+      <div className="rounded-control border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-800 dark:text-amber-200">
         <b>Modo demonstração.</b> {payment.shop.name} ainda não conectou o Mercado Pago, então nenhum valor será cobrado. Escolha uma
         opção para simular o pagamento.
       </div>

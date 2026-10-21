@@ -3,7 +3,8 @@ import type { Metadata } from "next";
 import { CalendarPlus, ExternalLink } from "lucide-react";
 import { AppointmentRow } from "@/components/appointment-row";
 import { CopyButton } from "@/components/copy-button";
-import { buttonClass, Card, EmptyState, LinkButton, PageHeader, Stat } from "@/components/ui";
+import { buttonClass, Card, EmptyState, LinkButton, Stat } from "@/components/ui";
+import { NICHES } from "@/config/niches";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { formatMoney } from "@/lib/money";
@@ -46,18 +47,22 @@ export default async function DashboardPage() {
     .reduce((sum, a) => sum + Math.max(0, a.totalCents - paidCents(a)), 0);
   const bookingPath = `/agendar/${shop.slug}`;
   const firstName = user.name.split(" ")[0];
+  const niche = NICHES[shop.niche];
 
   return (
     <>
-      <PageHeader
-        title={`Olá, ${firstName}!`}
-        description={formatDateLong(today)}
-        actions={
-          <LinkButton href="/painel/agenda/novo">
-            <CalendarPlus className="size-4" aria-hidden /> Agendar
-          </LinkButton>
-        }
-      />
+      <section className="relative mb-6 overflow-hidden rounded-card bg-linear-to-br from-hero-from to-hero-to p-6 text-white md:p-8">
+        <niche.icon className="pointer-events-none absolute -right-6 -bottom-10 size-48 opacity-15 md:right-6" aria-hidden />
+        <p className="text-sm text-white/80">{formatDateLong(today)}</p>
+        <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight lining-nums md:text-4xl">Olá, {firstName}!</h1>
+        <p className="mt-2 max-w-md text-white/85">{niche.welcome}</p>
+        <Link
+          href="/painel/agenda/novo"
+          className="mt-5 inline-flex h-10 items-center gap-2 rounded-button bg-white px-4 text-sm font-medium text-zinc-900 transition hover:bg-white/90"
+        >
+          <CalendarPlus className="size-4" aria-hidden /> Agendar
+        </Link>
+      </section>
 
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="Agendamentos hoje" value={appointments.length} hint={awaitingPayment ? `${awaitingPayment} aguardando pagamento` : undefined} />
@@ -89,7 +94,7 @@ export default async function DashboardPage() {
           <Card className="p-5">
             <h2 className="font-semibold">Seu link de agendamento</h2>
             <p className="mt-1 mb-3 text-sm text-muted">Coloque na bio do Instagram e mande no WhatsApp.</p>
-            <code className="mb-3 block truncate rounded-lg bg-surface-2 px-3 py-2 text-sm">{bookingPath}</code>
+            <code className="mb-3 block truncate rounded-control bg-surface-2 px-3 py-2 text-sm">{bookingPath}</code>
             <div className="flex flex-wrap gap-2">
               <CopyButton value={bookingPath} />
               <a href={bookingPath} target="_blank" className={buttonClass("secondary", "sm")}>

@@ -1,7 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import type { Niche } from "@prisma/client";
 import { db } from "@/lib/db";
+import { NICHE_ORDER } from "@/config/niches";
 import { requireUser } from "@/lib/auth";
 import { encryptSecret } from "@/lib/crypto";
 import { hashPassword, verifyPassword } from "@/lib/password";
@@ -41,7 +43,9 @@ const LOGO_TYPES = ["image/png", "image/jpeg", "image/webp"];
 export async function saveAppearance(_: ActionState, form: FormData): Promise<ActionState> {
   const { shopId } = await requireUser();
   const color = text(form, "primaryColor");
+  const niche = text(form, "niche") as Niche;
   if (!isHexColor(color)) return fail("Escolha uma cor válida.");
+  if (!NICHE_ORDER.includes(niche)) return fail("Escolha a área de atuação.");
 
   let logoUrl: string | null | undefined;
   const file = form.get("logo");
@@ -54,7 +58,7 @@ export async function saveAppearance(_: ActionState, form: FormData): Promise<Ac
     logoUrl = `data:${file.type};base64,${base64}`;
   }
 
-  await db.shop.update({ where: { id: shopId }, data: { primaryColor: color, ...(logoUrl !== undefined ? { logoUrl } : {}) } });
+  await db.shop.update({ where: { id: shopId }, data: { niche, primaryColor: color, ...(logoUrl !== undefined ? { logoUrl } : {}) } });
   revalidatePath("/", "layout");
   return saved;
 }

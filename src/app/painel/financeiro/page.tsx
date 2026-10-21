@@ -57,7 +57,7 @@ export default async function FinancePage({ searchParams }: PageProps<"/painel/f
       />
 
       <div className="mb-5 flex flex-wrap items-center gap-3">
-        <div className="flex rounded-lg border border-line bg-surface p-0.5" role="tablist" aria-label="Período">
+        <div className="flex rounded-control border border-line bg-surface p-0.5" role="tablist" aria-label="Período">
           {PERIODS.map((p) => (
             <Link
               key={p.value}

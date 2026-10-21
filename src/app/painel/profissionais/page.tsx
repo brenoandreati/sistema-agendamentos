@@ -3,13 +3,14 @@ import type { Metadata } from "next";
 import { Plus } from "lucide-react";
 import { Badge, Card, LinkButton, PageHeader } from "@/components/ui";
 import { requireUser } from "@/lib/auth";
+import { NICHES } from "@/config/niches";
 import { db } from "@/lib/db";
 import { minutesToHHMM, WEEKDAYS } from "@/lib/time";
 
 export const metadata: Metadata = { title: "Profissionais" };
 
 export default async function ProfessionalsPage() {
-  const { shopId } = await requireUser();
+  const { shopId, shop } = await requireUser();
   const professionals = await db.professional.findMany({
     where: { shopId },
     orderBy: [{ active: "desc" }, { sortOrder: "asc" }],
@@ -19,7 +20,7 @@ export default async function ProfessionalsPage() {
   return (
     <>
       <PageHeader
-        title="Profissionais"
+        title={NICHES[shop.niche].team}
         description="Cada profissional tem a sua agenda e os seus horários."
         actions={
           <LinkButton href="/painel/profissionais/novo">

@@ -13,6 +13,10 @@ type NicheConfig = {
   icon: LucideIcon;
   color: string;
   namePlaceholder: string;
+  /** Nome da equipe no menu do painel. */
+  team: string;
+  /** Frase do banner de boas-vindas do painel. */
+  welcome: string;
   services: { name: string; durationMin: number; priceCents: number }[];
 };
 
@@ -24,6 +28,8 @@ export const NICHES: Record<Niche, NicheConfig> = {
     icon: Scissors,
     color: "#b45309",
     namePlaceholder: "Ex.: Barbearia do Zé",
+    team: "Barbeiros",
+    welcome: "Cadeira pronta, navalha afiada. Bora pra mais um dia de cortes.",
     services: [
       { name: "Corte", durationMin: 30, priceCents: 4000 },
       { name: "Barba", durationMin: 30, priceCents: 3000 },
@@ -37,6 +43,8 @@ export const NICHES: Record<Niche, NicheConfig> = {
     icon: Sparkles,
     color: "#be185d",
     namePlaceholder: "Ex.: Studio Ana Hair",
+    team: "Profissionais",
+    welcome: "Que o dia seja de cabelos lindos e clientes felizes.",
     services: [
       { name: "Corte feminino", durationMin: 60, priceCents: 8000 },
       { name: "Escova", durationMin: 45, priceCents: 5000 },
@@ -51,6 +59,8 @@ export const NICHES: Record<Niche, NicheConfig> = {
     icon: Paintbrush,
     color: "#a21caf",
     namePlaceholder: "Ex.: Bia Nails",
+    team: "Nail designers",
+    welcome: "Esmaltes a postos! Suas clientes de hoje estão aqui.",
     services: [
       { name: "Manicure", durationMin: 45, priceCents: 3500 },
       { name: "Pedicure", durationMin: 45, priceCents: 4000 },
@@ -65,6 +75,8 @@ export const NICHES: Record<Niche, NicheConfig> = {
     icon: Flower2,
     color: "#0f766e",
     namePlaceholder: "Ex.: Espaço Bella",
+    team: "Profissionais",
+    welcome: "Respira fundo: seu dia de atendimentos está organizado.",
     services: [{ name: "Atendimento", durationMin: 60, priceCents: 10000 }],
   },
 };

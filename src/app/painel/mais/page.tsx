@@ -4,7 +4,8 @@ import { ChevronRight, ExternalLink, LogOut } from "lucide-react";
 import { Card, PageHeader } from "@/components/ui";
 import { requireUser } from "@/lib/auth";
 import { signOut } from "../../(auth)/actions";
-import { MORE_ITEMS } from "../nav-items";
+import { NICHES } from "@/config/niches";
+import { MORE_ITEMS, withTeamLabel } from "../nav-items";
 
 export const metadata: Metadata = { title: "Mais" };
 
@@ -14,7 +15,7 @@ export default async function MorePage() {
     <>
       <PageHeader title="Mais opções" />
       <Card className="divide-y divide-line">
-        {MORE_ITEMS.map((item) => (
+        {withTeamLabel(MORE_ITEMS, NICHES[user.shop.niche].team).map((item) => (
           <Link key={item.href} href={item.href} className="flex items-center gap-3 px-4 py-3.5">
             <item.icon className="size-5 text-muted" aria-hidden />
             <span className="flex-1 font-medium">{item.label}</span>

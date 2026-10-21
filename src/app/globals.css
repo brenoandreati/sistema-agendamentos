@@ -24,6 +24,94 @@
   }
 }
 
+/*
+ * Temas por área de atuação. O painel e a página de agendamento recebem data-niche
+ * (BARBER, HAIR, NAILS, OTHER) junto com a cor do negócio em --brand. As cores derivadas
+ * ficam aqui, no mesmo elemento, para acompanhar a cor que o negócio escolher.
+ */
+[data-niche] {
+  --sidebar: var(--surface);
+  --sidebar-fg: var(--fg);
+  --sidebar-muted: var(--muted);
+  --sidebar-hover: var(--surface-2);
+  --sidebar-line: var(--line);
+  --sidebar-active: color-mix(in srgb, var(--brand) 12%, transparent);
+  --sidebar-active-fg: var(--brand);
+  --hero-from: var(--brand);
+  --hero-to: color-mix(in srgb, var(--brand) 65%, black);
+}
+
+/* Barbearia: clássico, menu escuro, títulos fortes e cantos retos */
+[data-niche="BARBER"] {
+  --niche-font: var(--font-barber);
+  --niche-card-radius: 0.5rem;
+  --niche-control-radius: 0.375rem;
+  --niche-button-radius: 0.375rem;
+  --bg: color-mix(in srgb, var(--brand) 3%, #f2f0ec);
+  --sidebar: #1c1917;
+  --sidebar-fg: #f5f5f4;
+  --sidebar-muted: #a8a29e;
+  --sidebar-hover: #292524;
+  --sidebar-line: #292524;
+  --sidebar-active: color-mix(in srgb, var(--brand) 30%, #1c1917);
+  --sidebar-active-fg: color-mix(in srgb, var(--brand) 40%, white);
+  --hero-from: #1c1917;
+  --hero-to: color-mix(in srgb, var(--brand) 55%, #1c1917);
+}
+
+/* Cabeleireira: elegante, títulos serifados, tudo bem arredondado */
+[data-niche="HAIR"] {
+  --niche-font: var(--font-hair);
+  --niche-card-radius: 1.25rem;
+  --niche-control-radius: 0.75rem;
+  --niche-button-radius: 9999px;
+  --bg: color-mix(in srgb, var(--brand) 5%, #fbf8f6);
+}
+
+/* Nail designer: alegre, fonte arredondada, menu colorido */
+[data-niche="NAILS"] {
+  --niche-font: var(--font-nails);
+  --niche-card-radius: 1.5rem;
+  --niche-control-radius: 0.875rem;
+  --niche-button-radius: 9999px;
+  --bg: color-mix(in srgb, var(--brand) 6%, #fbf8fd);
+  --sidebar: color-mix(in srgb, var(--brand) 7%, white);
+  --sidebar-hover: color-mix(in srgb, var(--brand) 13%, white);
+  --sidebar-line: color-mix(in srgb, var(--brand) 15%, white);
+  --sidebar-active: var(--brand);
+  --sidebar-active-fg: var(--brand-fg);
+}
+
+/* Outras áreas (estética, cílios, sobrancelha...): calmo, estilo spa */
+[data-niche="OTHER"] {
+  --niche-font: var(--font-other);
+  --niche-card-radius: 1rem;
+  --niche-control-radius: 0.625rem;
+  --niche-button-radius: 0.625rem;
+  --bg: color-mix(in srgb, var(--brand) 4%, #f5f7f6);
+}
+
+@media (prefers-color-scheme: dark) {
+  [data-niche="BARBER"] {
+    --bg: #0f0e0d;
+    --sidebar: #161412;
+    --sidebar-hover: #23201d;
+    --sidebar-line: #2a2622;
+  }
+  [data-niche="HAIR"] {
+    --bg: color-mix(in srgb, var(--brand) 6%, #0d0d0f);
+  }
+  [data-niche="NAILS"] {
+    --bg: color-mix(in srgb, var(--brand) 7%, #0d0d0f);
+    --sidebar: color-mix(in srgb, var(--brand) 10%, #17171a);
+    --sidebar-hover: color-mix(in srgb, var(--brand) 18%, #17171a);
+    --sidebar-line: color-mix(in srgb, var(--brand) 20%, #17171a);
+  }
+  [data-niche="OTHER"] {
+    --bg: color-mix(in srgb, var(--brand) 5%, #0d0d0f);
+  }
+}
+
 @theme inline {
   --color-bg: var(--bg);
   --color-surface: var(--surface);
@@ -33,8 +121,21 @@
   --color-muted: var(--muted);
   --color-brand: var(--brand);
   --color-brand-fg: var(--brand-fg);
+  --color-sidebar: var(--sidebar, var(--surface));
+  --color-sidebar-fg: var(--sidebar-fg, var(--fg));
+  --color-sidebar-muted: var(--sidebar-muted, var(--muted));
+  --color-sidebar-hover: var(--sidebar-hover, var(--surface-2));
+  --color-sidebar-line: var(--sidebar-line, var(--line));
+  --color-sidebar-active: var(--sidebar-active, var(--surface-2));
+  --color-sidebar-active-fg: var(--sidebar-active-fg, var(--brand));
+  --color-hero-from: var(--hero-from, var(--brand));
+  --color-hero-to: var(--hero-to, var(--brand));
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-display: var(--niche-font, var(--font-geist-sans)), ui-sans-serif, system-ui, sans-serif;
+  --radius-card: var(--niche-card-radius, 0.75rem);
+  --radius-control: var(--niche-control-radius, 0.5rem);
+  --radius-button: var(--niche-button-radius, 0.5rem);
 }
 
 body {

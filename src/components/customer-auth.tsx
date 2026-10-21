@@ -24,7 +24,7 @@ export function CustomerAuthForms({ onDone }: { onDone: (customer: CustomerProfi
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-2 rounded-lg border border-line bg-surface p-0.5" role="tablist">
+      <div className="grid grid-cols-2 rounded-control border border-line bg-surface p-0.5" role="tablist">
         {(["entrar", "criar"] as const).map((value) => (
           <button
             key={value}
