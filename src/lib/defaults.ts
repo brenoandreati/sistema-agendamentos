@@ -12,7 +12,7 @@ export const PROFESSIONAL_COLORS = ["#b45309", "#0f766e", "#7c3aed", "#be123c", 
 
 /** Fusos do Brasil (sem horário de verão desde 2019). */
 export const TIMEZONES = [
-  { value: "America/Sao_Paulo", label: "Horário de Brasília (maioria dos estados)" },
+  { value: "America/Sao_Paulo", label: "Brasília (maioria dos estados)" },
   { value: "America/Manaus", label: "1 hora a menos (AM, MT, MS, RO, RR)" },
   { value: "America/Rio_Branco", label: "2 horas a menos (AC)" },
   { value: "America/Noronha", label: "1 hora a mais (Fernando de Noronha)" },

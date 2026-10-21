@@ -72,7 +72,7 @@ const TITLES = {
 
 /** Avisa o dono sobre um agendamento, depois de responder ao cliente (não atrasa a tela dele). */
 export function notifyAppointmentLater(appointmentId: string, kind: keyof typeof TITLES) {
-  after(async () => {
+  const task = async () => {
     try {
       const appointment = await db.appointment.findUnique({
         where: { id: appointmentId },
@@ -93,5 +93,11 @@ export function notifyAppointmentLater(appointmentId: string, kind: keyof typeof
     } catch (error) {
       console.error("Falha ao avisar o negócio", error);
     }
-  });
+  };
+  // Fora de uma requisição (ex.: scripts), `after` não existe: envia na hora.
+  try {
+    after(task);
+  } catch {
+    void task();
+  }
 }

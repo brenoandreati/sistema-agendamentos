@@ -30,12 +30,16 @@ No ar em: https://arvan-agendamentos.brenoandreati.workers.dev
 - Quando o negócio tem mais de um profissional, o cliente escolhe primeiro **com quem** quer ser atendido. A lista mostra cada nome e os serviços que a pessoa faz, e tem a opção "sem preferência". Depois aparecem só os serviços daquele profissional.
 - Quando o negócio tem um profissional só, o agendamento já começa pelo serviço.
 - Em seguida escolhe o dia e o horário livre.
-- Paga por **Pix ou cartão pelo Mercado Pago** para confirmar. O valor pode ser o total, um sinal (%) ou nada online.
+- Paga por **Pix ou cartão pelo Mercado Pago** para confirmar. O valor pode ser o total, um sinal (%) ou nada online. Se o negócio ainda não conectou o Mercado Pago, o cliente agenda sem pagar online e paga no local.
 - O horário fica reservado por alguns minutos enquanto ele paga. Se não pagar, o horário volta a ficar livre.
 - Se duas pessoas tentam o mesmo horário ao mesmo tempo, só uma consegue. A outra recebe um aviso para escolher outro horário.
 - Recebe a confirmação na tela, com botão para salvar na agenda do celular e falar com o negócio no WhatsApp.
+- **Cancela sozinho** pelo link do agendamento, até o prazo que o negócio escolher (ex.: 2 horas antes).
+- Pode marcar "lembrar meus dados neste aparelho" (vem desmarcado) e pode apagar a própria conta em **Minha conta**.
 
 **Para o negócio (painel `/painel`)**
+- **Avisos no celular** a cada agendamento novo, pago ou cancelado pelo cliente (notificação do navegador; no iPhone, com o app instalado na tela de início).
+- **Novos agendamentos online** e **Precisa de atenção** no início do painel. A segunda lista mostra pagamentos online que precisam ser devolvidos: horário cancelado ou pago depois de outra pessoa pegar o horário.
 - **Calendário do mês** na agenda, com um pontinho nos dias que têm agendamento. Ao clicar num dia, abre a agenda daquele dia.
 - **Agenda do dia** com uma coluna por profissional, mostrando qual cliente está em cada horário: criar, remarcar, concluir, marcar falta, cancelar e fazer encaixe.
 - **Bloqueio de horários** (folga, almoço, compromisso).
@@ -48,6 +52,8 @@ No ar em: https://arvan-agendamentos.brenoandreati.workers.dev
   - **quem pagou** e **quem ainda não pagou**;
   - divisão por forma de pagamento e entre online e presencial.
 - Registro de pagamento presencial (Pix, dinheiro, débito, crédito) e **entradas avulsas** (cliente sem agendamento).
+- **Apagar dados pessoais** de um cliente que pedir (LGPD): o histórico de atendimentos e pagamentos continua, sem nome, telefone e e-mail.
+- Regras da agenda: intervalo dos horários, antecedência mínima, até quantos dias à frente, prazo de cancelamento pelo cliente e **fuso horário** do estado.
 - **Exportar planilha** (CSV que abre direto no Excel).
 - Funciona no celular e pode ser instalado na tela inicial, como um app.
 
@@ -65,6 +71,18 @@ No ar em: https://arvan-agendamentos.brenoandreati.workers.dev
 - Pode mexer à vontade: **Restaurar dados**, no topo do painel, volta tudo ao normal. A agenda também é refeita sozinha a cada 12 horas, para acompanhar a data de hoje.
 - As configurações ficam travadas e o pagamento é sempre simulado. Ninguém consegue usar a demonstração para receber dinheiro ou mudar o link.
 - A página não aparece no Google e não tem link na página inicial. Para mostrar para alguém, mande o endereço `/demonstracao`.
+
+**Para você, dono da plataforma**
+- **Administração (`/admin`)**: lista os negócios cadastrados, quem está usando (agendamentos na semana, último agendamento), quem conectou o Mercado Pago e quem ligou os avisos. Só abre para os e-mails em `ADMIN_EMAILS`, e a pessoa precisa ter uma conta de negócio com esse e-mail.
+- **Senha esquecida**: a pessoa toca em "Esqueci minha senha" e fala com o suporte no WhatsApp (`SUPPORT_WHATSAPP`). No `/admin`, você gera um link de uso único (vale 24 horas) e manda pelo próprio WhatsApp. A senha nova desconecta os outros aparelhos.
+- **Termos de uso** (`/termos`) e **política de privacidade** (`/privacidade`), com aceite obrigatório ao criar conta. São um texto base: vale um advogado revisar antes de cobrar pelo serviço.
+
+**Segurança**
+- Limite de tentativas no login, no cadastro, na senha nova e no agendamento online (contra robôs e quem tenta adivinhar senha).
+- Cada WhatsApp pode ter até 4 horários futuros no mesmo negócio pelo site.
+- Trocar a senha desconecta os outros aparelhos.
+- Senhas com no mínimo 8 caracteres, guardadas com hash. O token do Mercado Pago fica criptografado.
+- Na demonstração, os dados digitados por visitantes (WhatsApp e e-mail) não são guardados e o catálogo fica travado.
 
 ---
 
@@ -115,6 +133,9 @@ Guarde essa senha: ela é o seu **AUTH_SECRET**.
    | `DATABASE_URL` | o endereço do Neon |
    | `AUTH_SECRET` | a chave secreta do passo 2 |
    | `APP_URL` | o endereço do sistema, ex.: `https://arvan-agendamentos.SEU-USUARIO.workers.dev` |
+   | `VAPID_PUBLIC_KEY` e `VAPID_PRIVATE_KEY` | chaves dos avisos no celular. Gere com `npm run vapid` (uma vez só: trocar desliga os avisos já ligados) |
+   | `ADMIN_EMAILS` | seu e-mail, para abrir o `/admin` |
+   | `SUPPORT_WHATSAPP` | o WhatsApp do suporte, com DDD (ex.: `11987654321`) |
 9. Salve (**Deploy**). Pronto: abra o endereço, escolha a sua área e cadastre o seu negócio.
 
 Daqui para frente, toda alteração enviada ao GitHub é publicada sozinha pelo Cloudflare.
@@ -133,7 +154,7 @@ O sistema passa a usar o Hyperdrive automaticamente.
 
 ### 4. Ligar o pagamento online (Mercado Pago)
 
-Sem token do Mercado Pago, o sistema funciona em **modo demonstração**: o cliente vê uma tela que simula o pagamento e nada é cobrado. Não divulgue o link para clientes nesse modo. Ou conecte o Mercado Pago, ou escolha "Nada online" em Configurações.
+Sem token do Mercado Pago, ninguém paga online: o cliente agenda e paga no local, e o painel mostra um aviso para conectar. Cada negócio conecta a própria conta, e o dinheiro cai direto nela (a plataforma não recebe nem repassa valores).
 
 Para cobrar de verdade:
 1. Acesse https://www.mercadopago.com.br/developers/panel/app e crie uma aplicação do tipo **Checkout Pro**.
@@ -197,10 +218,18 @@ src/lib/mercadopago.ts      integração com a API do Mercado Pago
 src/lib/finance.ts          números do relatório financeiro
 src/lib/demo.ts             cria e restaura os negócios da demonstração
 src/lib/demo-data.ts        gera a agenda e os pagamentos fictícios (com testes)
+src/lib/web-push.ts         avisos no celular: criptografia e assinatura (com testes)
+src/lib/notify.ts           envia os avisos de agendamento novo, pago e cancelado
+src/lib/rate-limit.ts       limite de tentativas (login, cadastro, agendamento)
+src/lib/cancellation.ts     regras de cancelamento pelo cliente (com testes)
+src/lib/admin.ts            administração da plataforma e links de senha nova
+public/sw.js                recebe os avisos no aparelho do dono
 src/app/agendar/[slug]/     página pública de agendamento e pagamento
 src/app/painel/             painel do negócio (agenda, financeiro, cadastros, configurações)
 src/app/cliente/            conta do cliente: entrar, criar conta e "Minha conta"
 src/app/demonstracao/       página de demonstração de todas as áreas
+src/app/admin/              administração da plataforma (só para ADMIN_EMAILS)
+src/app/(legal)/            termos de uso e política de privacidade
 ```
 
 ## Tecnologia
