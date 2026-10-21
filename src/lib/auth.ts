@@ -62,18 +62,22 @@ export const getSession = cache(async (): Promise<Session | null> => {
 
 /**
  * Usuário logado com o negócio dele, ou null. Confere no banco: se a senha mudou depois
- * do login (sessionVersion), o login antigo não vale mais.
+ * do login (sessionVersion), o login antigo não vale mais. Login de profissional só vale
+ * enquanto o profissional estiver ativo.
  */
 export const getCurrentUser = cache(async () => {
   const session = await getSession();
   if (!session) return null;
   const user = await db.user.findUnique({
     where: { id: session.userId },
-    include: { shop: true },
+    include: { shop: true, professional: { select: { id: true, name: true, active: true } } },
   });
   if (!user || user.shopId !== session.shopId || user.sessionVersion !== session.version) return null;
+  if (user.role === "STAFF" && !user.professional?.active) return null;
   return user;
 });
+
+export type CurrentUser = NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>;
 
 /** Usuário logado com o negócio dele. Redireciona para o login se não houver sessão. */
 export const requireUser = cache(async () => {
@@ -81,6 +85,27 @@ export const requireUser = cache(async () => {
   if (!user) redirect("/entrar");
   return user;
 });
+
+export function isOwner(user: { role: string }) {
+  return user.role === "OWNER";
+}
+
+/** Só o dono do negócio. O profissional da equipe vai para a agenda dele. */
+export const requireOwner = cache(async () => {
+  const user = await requireUser();
+  if (!isOwner(user)) redirect("/painel/agenda");
+  return user;
+});
+
+/**
+ * Filtro dos agendamentos e bloqueios que o usuário pode ver e mexer:
+ * o dono vê o negócio inteiro; o profissional, só a própria agenda.
+ */
+export function agendaScope(user: { role: string; professionalId: string | null }): { professionalId?: string } {
+  if (isOwner(user)) return {};
+  // Sem profissional ligado, não vê nada (não deveria acontecer: getCurrentUser já barra).
+  return { professionalId: user.professionalId ?? "-" };
+}
 
 export async function createCustomerSession(customer: { id: string; sessionVersion: number }) {
   await writeToken(CUSTOMER_COOKIE, { customerId: customer.id, v: customer.sessionVersion, kind: "customer" });

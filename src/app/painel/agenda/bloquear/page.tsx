@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { ActionForm, SubmitButton } from "@/components/forms";
 import { Card, Checkbox, EmptyState, Field, Input, PageHeader } from "@/components/ui";
-import { requireUser } from "@/lib/auth";
+import { agendaScope, requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { formatDateShort, formatTime, isDateStr, todayStr, toDateStr } from "@/lib/time";
 import { createBlock, deleteBlock } from "../actions";
@@ -9,14 +9,19 @@ import { createBlock, deleteBlock } from "../actions";
 export const metadata: Metadata = { title: "Bloquear horário" };
 
 export default async function BlockPage({ searchParams }: PageProps<"/painel/agenda/bloquear">) {
-  const { shop } = await requireUser();
+  const user = await requireUser();
+  const { shop } = user;
+  const scope = agendaScope(user);
   const query = await searchParams;
   const date = isDateStr(query.data) ? query.data : todayStr(shop.timezone);
 
   const [professionals, upcoming] = await Promise.all([
-    db.professional.findMany({ where: { shopId: shop.id, active: true }, orderBy: { sortOrder: "asc" } }),
+    db.professional.findMany({
+      where: { shopId: shop.id, active: true, ...(scope.professionalId ? { id: scope.professionalId } : {}) },
+      orderBy: { sortOrder: "asc" },
+    }),
     db.timeBlock.findMany({
-      where: { shopId: shop.id, endAt: { gt: new Date() } },
+      where: { shopId: shop.id, endAt: { gt: new Date() }, ...scope },
       include: { professional: true },
       orderBy: { startAt: "asc" },
       take: 50,

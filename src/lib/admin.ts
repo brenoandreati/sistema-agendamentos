@@ -1,7 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { notFound } from "next/navigation";
-import { getCurrentUser } from "./auth";
+import { getCurrentUser, isOwner } from "./auth";
 import { db } from "./db";
 import { toBase64Url } from "./encoding";
 
@@ -17,7 +17,7 @@ export function isAdminEmail(email: string) {
 /** Só o administrador vê; para os outros a página nem existe. */
 export const requireAdmin = cache(async () => {
   const user = await getCurrentUser();
-  if (!user || !isAdminEmail(user.email)) notFound();
+  if (!user || !isOwner(user) || !isAdminEmail(user.email)) notFound();
   return user;
 });
 
@@ -42,7 +42,7 @@ export async function findPasswordReset(code: string) {
   if (!/^[\w-]{40,50}$/.test(code)) return null;
   const reset = await db.passwordReset.findUnique({
     where: { tokenHash: await sha256(code) },
-    include: { user: true, customer: true },
+    include: { user: { include: { shop: { select: { name: true } } } }, customer: true },
   });
   if (!reset || reset.usedAt || reset.expiresAt < new Date() || (!reset.user && !reset.customer)) return null;
   return reset;

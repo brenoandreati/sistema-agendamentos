@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { customerCancelPolicy } from "@/lib/cancellation";
+import { customerCancelPolicy, customerReschedulePolicy } from "@/lib/cancellation";
 import { notifyAppointmentLater } from "@/lib/notify";
 import type { PaymentMethod } from "@prisma/client";
 import { db } from "@/lib/db";
@@ -13,7 +13,7 @@ import { addNote, onlyDigits } from "@/lib/format";
 import { allWithinLimits, clientIp, TOO_MANY } from "@/lib/rate-limit";
 import { approvePayment, chargeAtBookingCents, startCheckout } from "@/lib/payments";
 import { findConflict, getDayAvailability, lockProfessional } from "@/lib/scheduling";
-import { formatDateNumeric, formatTime, isDateStr, toDateStr, zonedToUtc } from "@/lib/time";
+import { formatDateNumeric, formatDateShort, formatTime, isDateStr, toDateStr, zonedToUtc } from "@/lib/time";
 
 export type BookingInput = {
   slug: string;
@@ -200,4 +200,81 @@ export async function cancelByCustomer(_: ActionState, form: FormData): Promise<
   ]);
   notifyAppointmentLater(appointment.id, "canceled");
   redirect(`/agendar/${appointment.shop.slug}/agendamento/${appointment.publicToken}`);
+}
+
+/** Agendamento que o cliente pode remarcar pelo link, com o negócio e a duração dele. Texto = motivo de não poder. */
+async function reschedulable(token: string) {
+  const appointment = await db.appointment.findUnique({
+    where: { publicToken: String(token).slice(0, 100) },
+    include: { shop: true, professional: { select: { id: true, active: true, bookableOnline: true } } },
+  });
+  if (!appointment) return "Agendamento não encontrado.";
+  const policy = customerReschedulePolicy(appointment, appointment.shop);
+  if (!policy.allowed) return policy.reason;
+  const durationMin = Math.round((appointment.endAt.getTime() - appointment.startAt.getTime()) / 60_000);
+  return { appointment, shop: appointment.shop, durationMin };
+}
+
+type Reschedulable = Exclude<Awaited<ReturnType<typeof reschedulable>>, string>;
+
+async function freeTimes(found: Reschedulable, date: string) {
+  const { appointment, shop, durationMin } = found;
+  const availability = await getDayAvailability({
+    shop,
+    dateStr: date,
+    durationMin,
+    professionalIds: [appointment.professionalId],
+    publicBooking: true,
+    excludeAppointmentId: appointment.id,
+  });
+  // O horário atual não conta como opção de remarcação.
+  const current = toDateStr(appointment.startAt, shop.timezone) === date ? appointment.startAt.getTime() : null;
+  return (availability[appointment.professionalId] ?? []).filter((t) => zonedToUtc(date, t, shop.timezone).getTime() !== current);
+}
+
+/** Horários livres do mesmo profissional para remarcar (mesma duração do agendamento). */
+export async function getRescheduleSlots(token: string, date: string): Promise<{ slots: number[] } | { error: string }> {
+  if (!isDateStr(date)) return { slots: [] };
+  const found = await reschedulable(token);
+  if (typeof found === "string") return { error: found };
+  return { slots: await freeTimes(found, date) };
+}
+
+/** O cliente troca o próprio horário pela página do agendamento. O pagamento feito continua valendo. */
+export async function rescheduleByCustomer(input: { token: string; date: string; time: number }): Promise<BookingResult> {
+  if (!isDateStr(input.date) || !Number.isInteger(input.time)) return { error: "Escolha o dia e o horário." };
+  if (!(await allWithinLimits([[`reschedule:ip:${await clientIp()}`, 20, 600]]))) return { error: TOO_MANY };
+  const found = await reschedulable(input.token);
+  if (typeof found === "string") return { error: found };
+  const { appointment, shop, durationMin } = found;
+  if (!(await freeTimes(found, input.date)).includes(input.time)) return { error: TAKEN };
+
+  const tz = shop.timezone;
+  const startAt = zonedToUtc(input.date, input.time, tz);
+  const endAt = new Date(startAt.getTime() + durationMin * 60_000);
+  const now = new Date();
+  const before = `${formatDateShort(toDateStr(appointment.startAt, tz))} às ${formatTime(appointment.startAt, tz)}`;
+  const moved = await db.$transaction(async (tx) => {
+    await lockProfessional(tx, appointment.professionalId);
+    const conflict = await findConflict(tx, { professionalId: appointment.professionalId, startAt, endAt, excludeAppointmentId: appointment.id });
+    if (conflict) return false;
+    // Só remarca se ninguém mexeu no agendamento enquanto isso (cancelou, remarcou no painel...).
+    const updated = await tx.appointment.updateMany({
+      where: { id: appointment.id, status: "CONFIRMED", startAt: appointment.startAt },
+      data: {
+        startAt,
+        endAt,
+        reminderSentAt: null,
+        notes: addNote(
+          appointment.notes,
+          `Remarcado pelo cliente pelo site em ${formatDateNumeric(toDateStr(now, tz))} às ${formatTime(now, tz)} (era ${before}).`,
+        ),
+      },
+    });
+    return updated.count === 1;
+  });
+  if (!moved) return { error: TAKEN };
+
+  notifyAppointmentLater(appointment.id, "rescheduled");
+  return { redirectTo: `/agendar/${shop.slug}/agendamento/${appointment.publicToken}?remarcado=1` };
 }

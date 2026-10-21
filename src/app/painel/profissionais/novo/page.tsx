@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import { PageHeader } from "@/components/ui";
-import { requireUser } from "@/lib/auth";
+import { requireOwner } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { ProfessionalForm } from "../professional-form";
 
 export const metadata: Metadata = { title: "Novo profissional" };
 
 export default async function NewProfessionalPage() {
-  const { shopId } = await requireUser();
+  const { shopId } = await requireOwner();
   const [services, count] = await Promise.all([
     db.service.findMany({ where: { shopId, active: true }, orderBy: { sortOrder: "asc" } }),
     db.professional.count({ where: { shopId } }),

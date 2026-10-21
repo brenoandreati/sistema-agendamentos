@@ -34,11 +34,13 @@ No ar em: https://arvan-agendamentos.brenoandreati.workers.dev
 - O horário fica reservado por alguns minutos enquanto ele paga. Se não pagar, o horário volta a ficar livre.
 - Se duas pessoas tentam o mesmo horário ao mesmo tempo, só uma consegue. A outra recebe um aviso para escolher outro horário.
 - Recebe a confirmação na tela, com botão para salvar na agenda do celular e falar com o negócio no WhatsApp.
-- **Cancela sozinho** pelo link do agendamento, até o prazo que o negócio escolher (ex.: 2 horas antes).
+- **Cancela ou remarca sozinho** pelo link do agendamento, até o prazo que o negócio escolher (ex.: 2 horas antes). Para remarcar, escolhe outro dia e horário livre com o mesmo profissional; o que já pagou continua valendo.
 - Pode marcar "lembrar meus dados neste aparelho" (vem desmarcado) e pode apagar a própria conta em **Minha conta**.
 
 **Para o negócio (painel `/painel`)**
-- **Avisos no celular** a cada agendamento novo, pago ou cancelado pelo cliente (notificação do navegador; no iPhone, com o app instalado na tela de início).
+- **Avisos no celular** a cada agendamento novo, pago, cancelado ou remarcado pelo cliente (notificação do navegador; no iPhone, com o app instalado na tela de início).
+- **Lembretes** (`/painel/lembretes`): lista dos clientes de amanhã (ou de outro dia) com um botão de WhatsApp para cada um. O WhatsApp abre com a mensagem pronta, que leva o link para o cliente remarcar ou cancelar sozinho. A lista marca quem já recebeu. Não é automático: o envio sai do celular de quem toca no botão, sem custo.
+- **Login por profissional**: no cadastro do profissional, o dono cria um acesso com o e-mail dele e manda pelo WhatsApp um link de uso único para ele criar a senha. O profissional vê e mexe só na própria agenda (agendar, remarcar, concluir, bloquear horário, registrar pagamento e mandar lembretes) e recebe avisos só dos agendamentos dele. Não vê financeiro, clientes, serviços, outros profissionais nem configurações, e não apaga pagamentos.
 - **Novos agendamentos online** e **Precisa de atenção** no início do painel. A segunda lista mostra pagamentos online que precisam ser devolvidos: horário cancelado ou pago depois de outra pessoa pegar o horário.
 - **Calendário do mês** na agenda, com um pontinho nos dias que têm agendamento. Ao clicar num dia, abre a agenda daquele dia.
 - **Agenda do dia** com uma coluna por profissional, mostrando qual cliente está em cada horário: criar, remarcar, concluir, marcar falta, cancelar e fazer encaixe.
@@ -46,19 +48,20 @@ No ar em: https://arvan-agendamentos.brenoandreati.workers.dev
 - **Vários profissionais**, cada um com seus dias e horários de trabalho (com intervalo) e os **serviços que faz**, marcados no cadastro do profissional.
 - **Clientes** com histórico, total gasto, faltas e botão de WhatsApp com mensagem pronta de confirmação e lembrete.
 - **Financeiro** por dia, semana, mês e ano:
-  - quanto entrou e a comparação com o período anterior;
+  - quanto entrou, as **despesas** e o **lucro** (entrou menos despesas), com a comparação com o período anterior;
   - quanto falta receber e ticket médio;
   - gráfico do que entrou;
   - **quem pagou** e **quem ainda não pagou**;
   - divisão por forma de pagamento e entre online e presencial.
 - Registro de pagamento presencial (Pix, dinheiro, débito, crédito) e **entradas avulsas** (cliente sem agendamento).
+- **Despesas** por categoria (aluguel, produtos, contas, equipe, impostos e taxas, divulgação, equipamentos). As fixas, marcadas como "repetir todo mês", são lançadas sozinhas no mesmo dia de cada mês quando a data chega; dá para parar de repetir a qualquer momento.
 - **Apagar dados pessoais** de um cliente que pedir (LGPD): o histórico de atendimentos e pagamentos continua, sem nome, telefone e e-mail.
 - Regras da agenda: intervalo dos horários, antecedência mínima, até quantos dias à frente, prazo de cancelamento pelo cliente e **fuso horário** do estado.
-- **Exportar planilha** (CSV que abre direto no Excel).
+- **Exportar planilha** (CSV que abre direto no Excel), com as entradas e as despesas (valor negativo: a soma da coluna é o lucro).
 - Funciona no celular e pode ser instalado na tela inicial, como um app.
 
 **Demonstração (`/demonstracao`)**
-- Um negócio de exemplo para cada área, com 30 dias de agenda, clientes e financeiro fictícios:
+- Um negócio de exemplo para cada área, com 30 dias de agenda, clientes, despesas e financeiro fictícios:
 
   | Área | Negócio | Mostra |
   |---|---|---|
@@ -69,7 +72,7 @@ No ar em: https://arvan-agendamentos.brenoandreati.workers.dev
 
 - Entra no painel com um clique, sem conta e sem senha. Também abre a página de agendamento que o cliente vê.
 - Pode mexer à vontade: **Restaurar dados**, no topo do painel, volta tudo ao normal. A agenda também é refeita sozinha a cada 12 horas, para acompanhar a data de hoje.
-- As configurações ficam travadas e o pagamento é sempre simulado. Ninguém consegue usar a demonstração para receber dinheiro ou mudar o link.
+- As configurações ficam travadas e o pagamento é sempre simulado. Ninguém consegue usar a demonstração para receber dinheiro, mudar o link ou criar login de profissional.
 - A página não aparece no Google e não tem link na página inicial. Para mostrar para alguém, mande o endereço `/demonstracao`.
 
 **Para você, dono da plataforma**
@@ -150,7 +153,7 @@ Daqui para frente, toda alteração enviada ao GitHub é publicada sozinha pelo 
 
 O sistema passa a usar o Hyperdrive automaticamente.
 
-**Plano do Cloudflare:** o sistema cabe no plano gratuito, com 2,2 MB de um limite de 3 MB. O plano gratuito limita o processamento de cada acesso. Se aparecer o **erro 1102** em algum momento de uso intenso, ative o plano **Workers Paid** (US$ 5 por mês) em **Workers & Pages → Plans**.
+**Plano do Cloudflare:** o sistema cabe no plano gratuito, com 2,4 MB de um limite de 3 MB. O plano gratuito limita o processamento de cada acesso. Se aparecer o **erro 1102** em algum momento de uso intenso, ative o plano **Workers Paid** (US$ 5 por mês) em **Workers & Pages → Plans**.
 
 ### 4. Ligar o pagamento online (Mercado Pago)
 
@@ -191,7 +194,7 @@ Para testar exatamente como vai rodar no Cloudflare, copie `.dev.vars.example` p
 | `npm run dev` | Rodar em modo desenvolvimento |
 | `npm run preview` | Rodar localmente no mesmo motor do Cloudflare |
 | `npm run deploy` | Publicar no Cloudflare pelo terminal (precisa do `npx wrangler login` antes) |
-| `npm test` | Testes da lógica de horários, datas, períodos, valores e senhas |
+| `npm test` | Testes da lógica de horários, datas, períodos, valores, senhas, despesas fixas, remarcação e mensagens |
 | `npm run lint` / `npm run typecheck` | Verificar o código |
 | `npm run db:migrate` | Criar ou alterar tabelas (desenvolvimento) |
 | `npm run db:deploy` | Aplicar as tabelas em produção |
@@ -215,17 +218,19 @@ src/lib/availability.ts     cálculo dos horários livres (com testes)
 src/lib/scheduling.ts       agenda: horários livres, conflitos e reservas expiradas
 src/lib/payments.ts         cobrança online e confirmação de pagamentos
 src/lib/mercadopago.ts      integração com a API do Mercado Pago
-src/lib/finance.ts          números do relatório financeiro
+src/lib/finance.ts          números do relatório financeiro (com despesas e lucro) e lançamento das despesas fixas
+src/lib/expenses.ts         categorias de despesa e datas das despesas fixas (com testes)
 src/lib/demo.ts             cria e restaura os negócios da demonstração
 src/lib/demo-data.ts        gera a agenda e os pagamentos fictícios (com testes)
 src/lib/web-push.ts         avisos no celular: criptografia e assinatura (com testes)
-src/lib/notify.ts           envia os avisos de agendamento novo, pago e cancelado
+src/lib/notify.ts           envia os avisos de agendamento novo, pago, cancelado e remarcado (dono + profissional)
 src/lib/rate-limit.ts       limite de tentativas (login, cadastro, agendamento)
-src/lib/cancellation.ts     regras de cancelamento pelo cliente (com testes)
+src/lib/cancellation.ts     regras de cancelamento e remarcação pelo cliente (com testes)
+src/lib/messages.ts         mensagens prontas de WhatsApp: confirmação, lembrete e pagamento (com testes)
 src/lib/admin.ts            administração da plataforma e links de senha nova
 public/sw.js                recebe os avisos no aparelho do dono
 src/app/agendar/[slug]/     página pública de agendamento e pagamento
-src/app/painel/             painel do negócio (agenda, financeiro, cadastros, configurações)
+src/app/painel/             painel do negócio (agenda, lembretes, financeiro, despesas, cadastros, configurações)
 src/app/cliente/            conta do cliente: entrar, criar conta e "Minha conta"
 src/app/demonstracao/       página de demonstração de todas as áreas
 src/app/admin/              administração da plataforma (só para ADMIN_EMAILS)
@@ -238,6 +243,7 @@ src/app/(legal)/            termos de uso e política de privacidade
 - Prisma 6 com o driver `pg` e banco PostgreSQL.
 - Publicado no Cloudflare Workers pelo [OpenNext](https://opennext.js.org/cloudflare).
 - Segurança:
-  - o login usa sessão em cookie assinado (JWT), com logins separados para o dono do negócio e para o cliente;
+  - o login usa sessão em cookie assinado (JWT), com logins separados para o painel (dono e profissionais) e para o cliente;
+  - o profissional da equipe só alcança a própria agenda: as telas e ações do dono conferem o tipo de login no servidor;
   - as senhas são guardadas com PBKDF2;
   - o token do Mercado Pago fica criptografado no banco (AES-256-GCM).

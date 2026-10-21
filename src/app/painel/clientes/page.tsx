@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { Plus, Search } from "lucide-react";
 import { Card, EmptyState, Input, LinkButton, PageHeader } from "@/components/ui";
-import { requireUser } from "@/lib/auth";
+import { requireOwner } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { formatPhone, onlyDigits } from "@/lib/format";
 import { formatMoney } from "@/lib/money";
@@ -11,7 +11,7 @@ import { formatDateNumeric, toDateStr } from "@/lib/time";
 export const metadata: Metadata = { title: "Clientes" };
 
 export default async function ClientsPage({ searchParams }: PageProps<"/painel/clientes">) {
-  const { shop } = await requireUser();
+  const { shop } = await requireOwner();
   const q = typeof (await searchParams).q === "string" ? String((await searchParams).q).trim() : "";
   const digits = onlyDigits(q);
 

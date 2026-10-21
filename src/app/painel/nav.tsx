@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Ellipsis } from "lucide-react";
 import { cn } from "@/components/ui";
-import { MAIN_ITEMS as MAIN, MORE_ITEMS, withTeamLabel } from "./nav-items";
+import { navItems, withTeamLabel, type NavRole } from "./nav-items";
 
 function isActive(pathname: string, href: string) {
   if (href === "/painel") return pathname === "/painel";
@@ -13,11 +13,12 @@ function isActive(pathname: string, href: string) {
 }
 
 /** Menu lateral do computador. As cores vêm do tema da área (bg-sidebar etc.). */
-export function SidebarNav({ teamLabel }: { teamLabel: string }) {
+export function SidebarNav({ teamLabel, role }: { teamLabel: string; role: NavRole }) {
   const pathname = usePathname();
+  const { main, more } = navItems(role);
   return (
     <nav className="flex flex-col gap-0.5">
-      {[...MAIN, ...withTeamLabel(MORE_ITEMS, teamLabel)].map((item) => (
+      {[...main, ...withTeamLabel(more, teamLabel)].map((item) => (
         <Link
           key={item.href}
           href={item.href}
@@ -36,13 +37,14 @@ export function SidebarNav({ teamLabel }: { teamLabel: string }) {
   );
 }
 
-export function BottomNav() {
+export function BottomNav({ role }: { role: NavRole }) {
   const pathname = usePathname();
-  const moreActive = pathname.startsWith("/painel/mais") || MORE_ITEMS.some((item) => isActive(pathname, item.href));
-  const items = [...MAIN, { href: "/painel/mais", label: "Mais", icon: Ellipsis }];
+  const { main, more } = navItems(role);
+  const moreActive = pathname.startsWith("/painel/mais") || more.some((item) => isActive(pathname, item.href));
+  const items = [...main, { href: "/painel/mais", label: "Mais", icon: Ellipsis }];
   return (
     <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-sidebar-line bg-sidebar/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
-      <div className="grid grid-cols-5">
+      <div className={cn("grid", items.length === 5 ? "grid-cols-5" : "grid-cols-4")}>
         {items.map((item) => {
           const active = item.href === "/painel/mais" ? moreActive : isActive(pathname, item.href);
           return (

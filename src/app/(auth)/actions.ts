@@ -83,9 +83,12 @@ export async function signIn(_: ActionState, form: FormData): Promise<ActionStat
     [`login:email:${email}`, 10, 900],
   ]);
   if (!allowed) return fail(TOO_MANY);
-  const user = await db.user.findUnique({ where: { email } });
+  const user = await db.user.findUnique({ where: { email }, include: { professional: { select: { active: true } } } });
   if (!user || !(await verifyPassword(password, user.passwordHash))) {
     return fail("E-mail ou senha incorretos.");
+  }
+  if (user.role === "STAFF" && !user.professional?.active) {
+    return fail("Seu acesso está desativado. Fale com o dono do negócio.");
   }
   await createSession(user);
   redirect("/painel");

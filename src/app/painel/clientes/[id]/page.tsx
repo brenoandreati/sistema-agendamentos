@@ -4,7 +4,7 @@ import { CalendarPlus, MessageCircle } from "lucide-react";
 import { AppointmentRow } from "@/components/appointment-row";
 import { ActionForm, SubmitButton } from "@/components/forms";
 import { buttonClass, Card, EmptyState, LinkButton, PageHeader, Stat } from "@/components/ui";
-import { requireUser } from "@/lib/auth";
+import { requireOwner } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { formatPhone, whatsappLink } from "@/lib/format";
 import { formatMoney } from "@/lib/money";
@@ -16,7 +16,7 @@ export const metadata: Metadata = { title: "Cliente" };
 
 export default async function ClientPage({ params }: PageProps<"/painel/clientes/[id]">) {
   const { id } = await params;
-  const { shop } = await requireUser();
+  const { shop } = await requireOwner();
   const client = await db.client.findFirst({ where: { id, shopId: shop.id } });
   if (!client) notFound();
 

@@ -5,7 +5,7 @@ import type { Niche } from "@prisma/client";
 import { db } from "@/lib/db";
 import { DEMO_LOCKED, isReservedSlug } from "@/config/demo";
 import { NICHE_ORDER } from "@/config/niches";
-import { createSession, requireUser } from "@/lib/auth";
+import { createSession, requireOwner, requireUser } from "@/lib/auth";
 import { CANCEL_NOTICES, TIMEZONES } from "@/lib/defaults";
 import { withinLimit, TOO_MANY } from "@/lib/rate-limit";
 import { encryptSecret } from "@/lib/crypto";
@@ -17,7 +17,7 @@ import { getAccount, MercadoPagoError } from "@/lib/mercadopago";
 const saved: ActionState = { ok: true, message: "Alterações salvas." };
 
 export async function saveShopInfo(_: ActionState, form: FormData): Promise<ActionState> {
-  const { shopId, shop } = await requireUser();
+  const { shopId, shop } = await requireOwner();
   if (shop.isDemo) return fail(DEMO_LOCKED);
   const name = text(form, "name", 80);
   const slug = slugify(text(form, "slug", 60));
@@ -47,7 +47,7 @@ const MAX_LOGO_BYTES = 300 * 1024;
 const LOGO_TYPES = ["image/png", "image/jpeg", "image/webp"];
 
 export async function saveAppearance(_: ActionState, form: FormData): Promise<ActionState> {
-  const { shopId, shop } = await requireUser();
+  const { shopId, shop } = await requireOwner();
   if (shop.isDemo) return fail(DEMO_LOCKED);
   const color = text(form, "primaryColor");
   const niche = text(form, "niche") as Niche;
@@ -78,7 +78,7 @@ export async function saveAppearance(_: ActionState, form: FormData): Promise<Ac
 }
 
 export async function saveScheduleRules(_: ActionState, form: FormData): Promise<ActionState> {
-  const { shopId, shop } = await requireUser();
+  const { shopId, shop } = await requireOwner();
   if (shop.isDemo) return fail(DEMO_LOCKED);
   const slotIntervalMin = int(form, "slotIntervalMin");
   const minNoticeMin = int(form, "minNoticeMin");
@@ -89,7 +89,7 @@ export async function saveScheduleRules(_: ActionState, form: FormData): Promise
   if (!slotIntervalMin || slotIntervalMin < 5 || slotIntervalMin > 120) return fail("Intervalo da agenda inválido.");
   if (minNoticeMin === null || minNoticeMin < 0) return fail("Antecedência mínima inválida.");
   if (!maxAdvanceDays || maxAdvanceDays < 1 || maxAdvanceDays > 90) return fail("O limite de dias deve ficar entre 1 e 90.");
-  if (!CANCEL_NOTICES.some((n) => n.value === cancelNoticeMin)) return fail("Escolha até quando o cliente pode cancelar.");
+  if (!CANCEL_NOTICES.some((n) => n.value === cancelNoticeMin)) return fail("Escolha até quando o cliente pode cancelar ou remarcar.");
   if (!TIMEZONES.some((t) => t.value === timezone)) return fail("Escolha o fuso horário.");
   await db.shop.update({
     where: { id: shopId },
@@ -100,7 +100,7 @@ export async function saveScheduleRules(_: ActionState, form: FormData): Promise
 }
 
 export async function savePaymentSettings(_: ActionState, form: FormData): Promise<ActionState> {
-  const { shopId, shop } = await requireUser();
+  const { shopId, shop } = await requireOwner();
   if (shop.isDemo) return fail(DEMO_LOCKED);
   const mode = text(form, "paymentMode");
   const depositPercent = int(form, "depositPercent");

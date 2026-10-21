@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { buildDemoAgenda } from "./demo-data";
+import { buildDemoAgenda, buildDemoExpenses } from "./demo-data";
 import { defaultWorkingHours } from "./defaults";
 import { minutesOfDay, weekdayOf, toDateStr } from "./time";
 
@@ -69,4 +69,27 @@ test("pagamentos da demonstração seguem a forma de cobrança", () => {
     }
     assert.ok(payments.every((p) => new Date(p.paidAt!) <= new Date("2026-10-21T15:00:00.000Z") || p.channel === "IN_PERSON"));
   }
+});
+
+test("despesas da demonstração deixam lucro e repetem aluguel e internet", () => {
+  let n = 0;
+  const { recurring, expenses } = buildDemoExpenses({
+    shopId: "shop",
+    today: "2026-10-21",
+    timezone: SP,
+    revenueCents: 2_000_000,
+    newId: () => `r${n++}`,
+  });
+  const total = expenses.reduce((sum, e) => sum + e.amountCents, 0);
+  assert.ok(total > 0 && total < 2_000_000 * 0.5, "despesas abaixo da metade do que entrou");
+  assert.deepEqual(
+    recurring.map((r) => [r.description, r.dayOfMonth, r.nextDate]),
+    [
+      ["Aluguel do espaço", 5, "2026-11-05"],
+      ["Internet", 10, "2026-11-10"],
+    ],
+  );
+  // Todas no passado (até hoje) e as fixas ligadas à regra.
+  for (const e of expenses) assert.ok(toDateStr(new Date(e.date), SP) <= "2026-10-21");
+  assert.equal(expenses.filter((e) => e.recurringId).length, 2);
 });

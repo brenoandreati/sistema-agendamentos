@@ -4,13 +4,15 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { AppointmentStatus, PaymentMethod } from "@prisma/client";
 import { db } from "@/lib/db";
-import { requireUser } from "@/lib/auth";
+import { agendaScope, requireOwner, requireUser } from "@/lib/auth";
 import { findOrCreateClient } from "@/lib/clients";
 import { fail, text, type ActionState } from "@/lib/action";
 import { onlyDigits, PAYMENT_METHOD } from "@/lib/format";
 import { parseMoney } from "@/lib/money";
 import { findConflict, lockProfessional } from "@/lib/scheduling";
 import { hhmmToMinutes, isDateStr, zonedToUtc } from "@/lib/time";
+
+const STAFF_ONLY = "Você só pode mexer na sua própria agenda.";
 
 const CONFLICT_MESSAGE = {
   appointment: "Esse horário já está ocupado para esse profissional. Escolha outro ou marque \"Encaixe\".",
@@ -31,7 +33,9 @@ async function resolveClient(shopId: string, form: FormData) {
 }
 
 export async function saveAppointment(_: ActionState, form: FormData): Promise<ActionState> {
-  const { shop } = await requireUser();
+  const user = await requireUser();
+  const { shop } = user;
+  const scope = agendaScope(user);
   const id = text(form, "id");
   const date = text(form, "date");
   const time = hhmmToMinutes(text(form, "time"));
@@ -42,6 +46,7 @@ export async function saveAppointment(_: ActionState, form: FormData): Promise<A
   if (!isDateStr(date)) return fail("Escolha a data.");
   if (time === null) return fail("Escolha o horário.");
   if (!serviceIds.length) return fail("Escolha pelo menos um serviço.");
+  if (scope.professionalId && professionalId !== scope.professionalId) return fail(STAFF_ONLY);
 
   const [professional, services] = await Promise.all([
     db.professional.findFirst({ where: { id: professionalId, shopId: shop.id } }),
@@ -53,7 +58,7 @@ export async function saveAppointment(_: ActionState, form: FormData): Promise<A
   const client = await resolveClient(shop.id, form);
   if (typeof client === "string") return fail(client);
 
-  const existing = id ? await db.appointment.findFirst({ where: { id, shopId: shop.id } }) : null;
+  const existing = id ? await db.appointment.findFirst({ where: { id, shopId: shop.id, ...scope } }) : null;
   if (id && !existing) return fail("Agendamento não encontrado.");
 
   const ordered = serviceIds.map((sid) => services.find((s) => s.id === sid)!);
@@ -74,7 +79,17 @@ export async function saveAppointment(_: ActionState, form: FormData): Promise<A
       await tx.appointmentService.deleteMany({ where: { appointmentId: existing.id } });
       await tx.appointment.update({
         where: { id: existing.id },
-        data: { professionalId: professional.id, clientId: client.id, startAt, endAt, totalCents, notes, services: { create: serviceRows } },
+        data: {
+          professionalId: professional.id,
+          clientId: client.id,
+          startAt,
+          endAt,
+          totalCents,
+          notes,
+          services: { create: serviceRows },
+          // Mudou o horário: o lembrete enviado antes não vale mais.
+          ...(existing.startAt.getTime() !== startAt.getTime() ? { reminderSentAt: null } : {}),
+        },
       });
       return { error: null, id: existing.id };
     }
@@ -103,11 +118,11 @@ export async function saveAppointment(_: ActionState, form: FormData): Promise<A
 const ALLOWED_STATUS: AppointmentStatus[] = ["CONFIRMED", "COMPLETED", "NO_SHOW", "CANCELED"];
 
 export async function setAppointmentStatus(_: ActionState, form: FormData): Promise<ActionState> {
-  const { shop } = await requireUser();
+  const user = await requireUser();
   const id = text(form, "id");
   const status = text(form, "status") as AppointmentStatus;
   if (!ALLOWED_STATUS.includes(status)) return fail("Situação inválida.");
-  const appointment = await db.appointment.findFirst({ where: { id, shopId: shop.id } });
+  const appointment = await db.appointment.findFirst({ where: { id, shopId: user.shopId, ...agendaScope(user) } });
   if (!appointment) return fail("Agendamento não encontrado.");
 
   const result = await db.$transaction(async (tx) => {
@@ -134,14 +149,15 @@ export async function setAppointmentStatus(_: ActionState, form: FormData): Prom
 }
 
 export async function registerPayment(_: ActionState, form: FormData): Promise<ActionState> {
-  const { shop } = await requireUser();
+  const user = await requireUser();
+  const { shop } = user;
   const appointmentId = text(form, "appointmentId");
   const amountCents = parseMoney(text(form, "amount"));
   const method = text(form, "method") as PaymentMethod;
   if (!amountCents || amountCents <= 0) return fail("Informe o valor recebido.");
   if (!(method in PAYMENT_METHOD)) return fail("Escolha a forma de pagamento.");
 
-  const appointment = await db.appointment.findFirst({ where: { id: appointmentId, shopId: shop.id } });
+  const appointment = await db.appointment.findFirst({ where: { id: appointmentId, shopId: shop.id, ...agendaScope(user) } });
   if (!appointment) return fail("Agendamento não encontrado.");
 
   await db.$transaction([
@@ -165,8 +181,9 @@ export async function registerPayment(_: ActionState, form: FormData): Promise<A
   return { ok: true, message: "Pagamento registrado." };
 }
 
+/** Só o dono remove pagamento registrado (o profissional registra, mas não apaga). */
 export async function removePayment(_: ActionState, form: FormData): Promise<ActionState> {
-  const { shop } = await requireUser();
+  const { shop } = await requireOwner();
   const payment = await db.payment.findFirst({ where: { id: text(form, "paymentId"), shopId: shop.id } });
   if (!payment) return fail("Pagamento não encontrado.");
   if (payment.channel === "ONLINE") {
@@ -178,8 +195,11 @@ export async function removePayment(_: ActionState, form: FormData): Promise<Act
 }
 
 export async function createBlock(_: ActionState, form: FormData): Promise<ActionState> {
-  const { shop } = await requireUser();
-  const professionalIds = form.getAll("professionalIds").map(String);
+  const user = await requireUser();
+  const { shop } = user;
+  const scope = agendaScope(user);
+  // O profissional da equipe só bloqueia a própria agenda.
+  const professionalIds = scope.professionalId ? [scope.professionalId] : form.getAll("professionalIds").map(String);
   const date = text(form, "date");
   const allDay = form.get("allDay") === "on";
   const start = allDay ? 0 : hhmmToMinutes(text(form, "start"));
@@ -216,8 +236,8 @@ export async function createBlock(_: ActionState, form: FormData): Promise<Actio
 }
 
 export async function deleteBlock(_: ActionState, form: FormData): Promise<ActionState> {
-  const { shop } = await requireUser();
-  await db.timeBlock.deleteMany({ where: { id: text(form, "id"), shopId: shop.id } });
+  const user = await requireUser();
+  await db.timeBlock.deleteMany({ where: { id: text(form, "id"), shopId: user.shopId, ...agendaScope(user) } });
   revalidatePath("/painel", "layout");
   return { ok: true, message: "Bloqueio removido." };
 }

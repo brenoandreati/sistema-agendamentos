@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { BellRing, CalendarClock, MessageCircle } from "lucide-react";
 import { ActionForm, SubmitButton } from "@/components/forms";
 import { Badge, buttonClass, Card, Checkbox, Field, Input, LinkButton, PageHeader, Select } from "@/components/ui";
-import { requireUser } from "@/lib/auth";
+import { agendaScope, isOwner, requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import {
   APPOINTMENT_STATUS,
@@ -16,19 +16,23 @@ import {
 } from "@/lib/format";
 import { confirmationMessage, reminderMessage } from "@/lib/messages";
 import { centsToInput, formatMoney } from "@/lib/money";
+import { appBaseUrl } from "@/lib/payments";
 import { expireStaleHolds } from "@/lib/scheduling";
 import { formatDateLong, formatDateNumeric, formatTime, toDateStr } from "@/lib/time";
 import { registerPayment, removePayment, setAppointmentStatus } from "../../agenda/actions";
+import { ReminderLink } from "../../lembretes/reminder-link";
 
 export const metadata: Metadata = { title: "Agendamento" };
 
 export default async function AppointmentPage({ params }: PageProps<"/painel/agendamentos/[id]">) {
   const { id } = await params;
-  const { shop } = await requireUser();
+  const user = await requireUser();
+  const { shop } = user;
+  const owner = isOwner(user);
   await expireStaleHolds(shop.id);
 
   const appointment = await db.appointment.findFirst({
-    where: { id, shopId: shop.id },
+    where: { id, shopId: shop.id, ...agendaScope(user) },
     include: { client: true, professional: true, services: true, payments: { orderBy: { createdAt: "asc" } } },
   });
   if (!appointment) notFound();
@@ -43,6 +47,11 @@ export default async function AppointmentPage({ params }: PageProps<"/painel/age
   const closed = appointment.status === "CANCELED" || appointment.status === "EXPIRED";
   const pendingOnline = appointment.payments.find((p) => p.status === "PENDING" && p.channel === "ONLINE");
 
+  // Com cancelamento pelo site ligado, o lembrete leva o link para o cliente remarcar ou cancelar sozinho.
+  const publicLink =
+    shop.cancelNoticeMin !== null && appointment.status === "CONFIRMED"
+      ? `${await appBaseUrl()}/agendar/${shop.slug}/agendamento/${appointment.publicToken}`
+      : null;
   const messageInput = {
     shopName: shop.name,
     timezone: tz,
@@ -129,7 +138,7 @@ export default async function AppointmentPage({ params }: PageProps<"/painel/age
                   </div>
                   <Badge tone={PAYMENT_STATUS[p.status].tone}>{PAYMENT_STATUS[p.status].label}</Badge>
                   <span className="w-20 text-right font-medium tabular-nums">{formatMoney(p.amountCents)}</span>
-                  {p.channel === "IN_PERSON" && p.status === "APPROVED" && (
+                  {owner && p.channel === "IN_PERSON" && p.status === "APPROVED" && (
                     <ActionForm action={removePayment} confirm="Remover este pagamento?">
                       <input type="hidden" name="paymentId" value={p.id} />
                       <SubmitButton variant="ghost" size="sm" pendingText="...">
@@ -220,17 +229,23 @@ export default async function AppointmentPage({ params }: PageProps<"/painel/age
               >
                 <MessageCircle className="size-4" aria-hidden /> Enviar confirmação
               </a>
-              <a
-                href={whatsappLink(appointment.client.phone, reminderMessage(messageInput))}
-                target="_blank"
-                rel="noreferrer"
+              <ReminderLink
+                appointmentId={appointment.id}
+                href={whatsappLink(appointment.client.phone, reminderMessage({ ...messageInput, link: publicLink }))}
                 className={buttonClass("secondary", "md", "justify-start")}
               >
                 <BellRing className="size-4" aria-hidden /> Enviar lembrete
-              </a>
-              <LinkButton href={`/painel/clientes/${appointment.client.id}`} variant="ghost" className="justify-start">
-                Ver ficha do cliente
-              </LinkButton>
+              </ReminderLink>
+              {appointment.reminderSentAt && (
+                <p className="px-1 text-xs text-muted">
+                  Lembrete enviado em {formatDateNumeric(toDateStr(appointment.reminderSentAt, tz))} às {formatTime(appointment.reminderSentAt, tz)}.
+                </p>
+              )}
+              {owner && (
+                <LinkButton href={`/painel/clientes/${appointment.client.id}`} variant="ghost" className="justify-start">
+                  Ver ficha do cliente
+                </LinkButton>
+              )}
             </div>
             {pendingOnline?.checkoutUrl && (
               <p className="mt-4 text-xs text-muted">Pagamento online pendente. O cliente recebeu o link ao agendar.</p>

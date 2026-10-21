@@ -24,10 +24,12 @@ export function confirmationMessage(input: MessageInput) {
   );
 }
 
-export function reminderMessage(input: MessageInput) {
+/** Lembrete do horário. Com `link` (página do agendamento), o cliente pode remarcar ou cancelar sozinho. */
+export function reminderMessage(input: MessageInput & { link?: string | null }) {
   return (
     `Olá, ${firstName(input.clientName)}! Passando para lembrar do seu horário: ` +
-    `${when(input)} com ${input.professionalName}. ${input.shopName} te espera! Se precisar remarcar, é só responder esta mensagem.`
+    `${when(input)} com ${input.professionalName}. ${input.shopName} te espera! ` +
+    (input.link ? `Se precisar remarcar ou cancelar: ${input.link}` : "Se precisar remarcar, é só responder esta mensagem.")
   );
 }
 

@@ -3,12 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { requireUser } from "@/lib/auth";
+import { requireOwner } from "@/lib/auth";
 import { fail, optionalText, text, type ActionState } from "@/lib/action";
 import { onlyDigits } from "@/lib/format";
 
 export async function saveClient(_: ActionState, form: FormData): Promise<ActionState> {
-  const { shopId } = await requireUser();
+  const { shopId } = await requireOwner();
   const id = text(form, "id");
   const name = text(form, "name");
   const phone = onlyDigits(text(form, "phone"));
@@ -33,7 +33,7 @@ export async function saveClient(_: ActionState, form: FormData): Promise<Action
 }
 
 export async function deleteClient(_: ActionState, form: FormData): Promise<ActionState> {
-  const { shopId } = await requireUser();
+  const { shopId } = await requireOwner();
   const id = text(form, "id");
   const client = await db.client.findFirst({ where: { id, shopId }, include: { _count: { select: { appointments: true } } } });
   if (!client) return fail("Cliente não encontrado.");

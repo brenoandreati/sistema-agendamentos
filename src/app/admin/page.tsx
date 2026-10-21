@@ -39,7 +39,11 @@ export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
         phone: true,
         createdAt: true,
         mpAccessToken: true,
-        users: { select: { id: true, name: true, email: true, _count: { select: { pushSubscriptions: true } } } },
+        // O dono vem primeiro; depois os logins dos profissionais.
+        users: {
+          select: { id: true, name: true, email: true, _count: { select: { pushSubscriptions: true } } },
+          orderBy: [{ role: "asc" }, { createdAt: "asc" }],
+        },
         _count: { select: { professionals: true, appointments: true, clients: true } },
       },
     }),
@@ -100,7 +104,8 @@ export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
                       {shop.phone ? ` · ${formatPhone(shop.phone)}` : ""}
                     </p>
                     <p className="text-sm text-muted">
-                      Desde {day(shop.createdAt)} · {shop._count.professionals} profissional(is) · {shop._count.clients} cliente(s) ·{" "}
+                      Desde {day(shop.createdAt)} · {shop._count.professionals} profissional(is)
+                      {shop.users.length > 1 ? ` (${shop.users.length - 1} com login)` : ""} · {shop._count.clients} cliente(s) ·{" "}
                       {shop._count.appointments} agendamento(s), {weeklyBy.get(shop.id) ?? 0} na semana
                       {last ? ` · último em ${day(last)}` : " · nenhum ainda"}
                     </p>

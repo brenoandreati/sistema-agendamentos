@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { Plus } from "lucide-react";
 import { Badge, Card, EmptyState, LinkButton, PageHeader } from "@/components/ui";
-import { requireUser } from "@/lib/auth";
+import { requireOwner } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { durationLabel } from "@/lib/format";
 import { formatMoney } from "@/lib/money";
@@ -10,7 +10,7 @@ import { formatMoney } from "@/lib/money";
 export const metadata: Metadata = { title: "Serviços" };
 
 export default async function ServicesPage() {
-  const { shopId } = await requireUser();
+  const { shopId } = await requireOwner();
   const services = await db.service.findMany({
     where: { shopId },
     orderBy: [{ active: "desc" }, { sortOrder: "asc" }, { name: "asc" }],

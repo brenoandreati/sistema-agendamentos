@@ -1,25 +1,27 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { AlertTriangle, CalendarPlus, ExternalLink } from "lucide-react";
+import { AlertTriangle, BellRing, CalendarPlus, ExternalLink } from "lucide-react";
 import { AppointmentRow } from "@/components/appointment-row";
 import { CopyButton } from "@/components/copy-button";
 import { PushToggle } from "@/components/push-toggle";
 import { buttonClass, Card, EmptyState, LinkButton, Stat } from "@/components/ui";
 import { NICHES } from "@/config/niches";
-import { requireUser } from "@/lib/auth";
+import { agendaScope, isOwner, requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { formatMoney } from "@/lib/money";
 import { pushPublicKey } from "@/lib/notify";
 import { mercadoPagoToken } from "@/lib/payments";
 import { appointmentInclude, paidCents } from "@/lib/queries";
 import { expireStaleHolds } from "@/lib/scheduling";
-import { dayRange, formatDateLong, startOfMonth, todayStr, zonedToUtc } from "@/lib/time";
+import { addDays, dayRange, formatDateLong, startOfMonth, todayStr, zonedToUtc } from "@/lib/time";
 
 export const metadata: Metadata = { title: "Início" };
 
 export default async function DashboardPage() {
   const user = await requireUser();
   const { shop } = user;
+  const owner = isOwner(user);
+  const scope = agendaScope(user);
   const tz = shop.timezone;
   const today = todayStr(tz);
   const { start, end } = dayRange(today, tz);
@@ -27,34 +29,42 @@ export default async function DashboardPage() {
   const now = new Date();
   const DAY = 24 * 60 * 60_000;
 
-  const [appointments, receivedToday, receivedMonth, attention, newOnline] = await Promise.all([
+  const tomorrow = dayRange(addDays(today, 1), tz);
+  const [appointments, receivedToday, receivedMonth, attention, newOnline, tomorrowReminders] = await Promise.all([
     db.appointment.findMany({
-      where: { shopId: shop.id, startAt: { gte: start, lt: end }, status: { notIn: ["CANCELED", "EXPIRED"] } },
+      where: { shopId: shop.id, startAt: { gte: start, lt: end }, status: { notIn: ["CANCELED", "EXPIRED"] }, ...scope },
       include: appointmentInclude,
       orderBy: { startAt: "asc" },
     }),
-    db.payment.aggregate({
-      where: { shopId: shop.id, status: "APPROVED", paidAt: { gte: start, lt: end } },
-      _sum: { amountCents: true },
-    }),
-    db.payment.aggregate({
-      where: { shopId: shop.id, status: "APPROVED", paidAt: { gte: zonedToUtc(startOfMonth(today), 0, tz), lt: end } },
-      _sum: { amountCents: true },
-    }),
+    // Dinheiro do negócio: só o dono vê.
+    owner
+      ? db.payment.aggregate({
+          where: { shopId: shop.id, status: "APPROVED", paidAt: { gte: start, lt: end } },
+          _sum: { amountCents: true },
+        })
+      : null,
+    owner
+      ? db.payment.aggregate({
+          where: { shopId: shop.id, status: "APPROVED", paidAt: { gte: zonedToUtc(startOfMonth(today), 0, tz), lt: end } },
+          _sum: { amountCents: true },
+        })
+      : null,
     // Dinheiro que precisa de uma ação do negócio: devolver ou remarcar.
-    db.appointment.findMany({
-      where: {
-        shopId: shop.id,
-        startAt: { gte: new Date(now.getTime() - 30 * DAY) },
-        OR: [
-          { status: { in: ["CANCELED", "EXPIRED"] }, payments: { some: { status: "APPROVED", channel: "ONLINE" } } },
-          { status: "CONFIRMED", startAt: { gt: now }, payments: { some: { status: "REFUNDED", channel: "ONLINE" } } },
-        ],
-      },
-      include: appointmentInclude,
-      orderBy: { startAt: "asc" },
-      take: 10,
-    }),
+    owner
+      ? db.appointment.findMany({
+          where: {
+            shopId: shop.id,
+            startAt: { gte: new Date(now.getTime() - 30 * DAY) },
+            OR: [
+              { status: { in: ["CANCELED", "EXPIRED"] }, payments: { some: { status: "APPROVED", channel: "ONLINE" } } },
+              { status: "CONFIRMED", startAt: { gt: now }, payments: { some: { status: "REFUNDED", channel: "ONLINE" } } },
+            ],
+          },
+          include: appointmentInclude,
+          orderBy: { startAt: "asc" },
+          take: 10,
+        })
+      : [],
     db.appointment.findMany({
       where: {
         shopId: shop.id,
@@ -62,12 +72,18 @@ export default async function DashboardPage() {
         createdAt: { gte: new Date(now.getTime() - 2 * DAY) },
         startAt: { gte: now },
         status: { in: ["CONFIRMED", "PENDING_PAYMENT"] },
+        ...scope,
       },
       include: appointmentInclude,
       orderBy: { createdAt: "desc" },
       take: 8,
     }),
+    db.appointment.findMany({
+      where: { shopId: shop.id, startAt: { gte: tomorrow.start, lt: tomorrow.end }, status: "CONFIRMED", ...scope },
+      select: { reminderSentAt: true },
+    }),
   ]);
+  const remindersLeft = tomorrowReminders.filter((a) => !a.reminderSentAt).length;
 
   const awaitingPayment = appointments.filter((a) => a.status === "PENDING_PAYMENT").length;
   const upcoming = appointments.filter((a) => a.endAt > now && a.status !== "COMPLETED");
@@ -93,12 +109,20 @@ export default async function DashboardPage() {
         </Link>
       </section>
 
-      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat label="Agendamentos hoje" value={appointments.length} hint={awaitingPayment ? `${awaitingPayment} aguardando pagamento` : undefined} />
-        <Stat label="Recebido hoje" value={formatMoney(receivedToday._sum.amountCents ?? 0)} />
-        <Stat label="A receber hoje" value={formatMoney(toReceive)} />
-        <Stat label="Recebido no mês" value={formatMoney(receivedMonth._sum.amountCents ?? 0)} />
-      </div>
+      {owner ? (
+        <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <Stat label="Agendamentos hoje" value={appointments.length} hint={awaitingPayment ? `${awaitingPayment} aguardando pagamento` : undefined} />
+          <Stat label="Recebido hoje" value={formatMoney(receivedToday?._sum.amountCents ?? 0)} />
+          <Stat label="A receber hoje" value={formatMoney(toReceive)} />
+          <Stat label="Recebido no mês" value={formatMoney(receivedMonth?._sum.amountCents ?? 0)} />
+        </div>
+      ) : (
+        <div className="mb-6 grid grid-cols-3 gap-3">
+          <Stat label="Hoje" value={appointments.length} hint="seus agendamentos" />
+          <Stat label="Concluídos" value={appointments.filter((a) => a.status === "COMPLETED").length} />
+          <Stat label="Falta atender" value={upcoming.length} />
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
         <div className="flex min-w-0 flex-col gap-6">
@@ -155,6 +179,20 @@ export default async function DashboardPage() {
         </div>
 
         <aside className="flex flex-col gap-4">
+          {tomorrowReminders.length > 0 && (
+            <Card className={remindersLeft ? "border-brand/40 p-5" : "p-5"}>
+              <h2 className="flex items-center gap-2 font-semibold">
+                <BellRing className="size-4 text-brand" aria-hidden /> Lembretes de amanhã
+              </h2>
+              <p className="mt-1 mb-3 text-sm text-muted">
+                {tomorrowReminders.length} cliente(s) amanhã ·{" "}
+                {remindersLeft ? `${remindersLeft} sem lembrete` : "todos já receberam"}
+              </p>
+              <LinkButton href="/painel/lembretes" size="sm" variant={remindersLeft ? "primary" : "secondary"}>
+                {remindersLeft ? "Enviar lembretes" : "Ver lista"}
+              </LinkButton>
+            </Card>
+          )}
           {!shop.isDemo && (
             <Card className="p-5">
               <h2 className="mb-2 font-semibold">Avisos no celular</h2>
@@ -172,7 +210,7 @@ export default async function DashboardPage() {
               </a>
             </div>
           </Card>
-          {!shop.isDemo && !(await mercadoPagoToken(shop)) && shop.paymentMode !== "NONE" && (
+          {owner && !shop.isDemo && !(await mercadoPagoToken(shop)) && shop.paymentMode !== "NONE" && (
             <Card className="border-amber-500/40 p-5">
               <h2 className="font-semibold">Conecte o Mercado Pago</h2>
               <p className="mt-1 mb-3 text-sm text-muted">

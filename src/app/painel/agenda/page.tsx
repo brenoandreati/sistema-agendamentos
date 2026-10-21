@@ -1,11 +1,11 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { Ban, Plus } from "lucide-react";
+import { Ban, BellRing, Plus } from "lucide-react";
 import { AppointmentRow } from "@/components/appointment-row";
 import { DateNav } from "@/components/date-nav";
 import { MonthCalendar } from "@/components/month-calendar";
 import { Card, EmptyState, LinkButton, PageHeader } from "@/components/ui";
-import { requireUser } from "@/lib/auth";
+import { agendaScope, isOwner, requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { formatMoney } from "@/lib/money";
 import { appointmentInclude, paidCents, serviceNames } from "@/lib/queries";
@@ -30,7 +30,10 @@ export const metadata: Metadata = { title: "Agenda" };
 const PX_PER_MIN = 1.6;
 
 export default async function AgendaPage({ searchParams }: PageProps<"/painel/agenda">) {
-  const { shop } = await requireUser();
+  const user = await requireUser();
+  const { shop } = user;
+  const scope = agendaScope(user);
+  const own = scope.professionalId ? { id: scope.professionalId } : {};
   const tz = shop.timezone;
   const query = await searchParams;
   const today = todayStr(tz);
@@ -46,17 +49,17 @@ export default async function AgendaPage({ searchParams }: PageProps<"/painel/ag
 
   const [professionals, appointments, blocks, monthAppointments, workdays] = await Promise.all([
     db.professional.findMany({
-      where: { shopId: shop.id, active: true },
+      where: { shopId: shop.id, active: true, ...own },
       orderBy: { sortOrder: "asc" },
       include: { workingHours: { where: { weekday: weekdayOf(date) } } },
     }),
     db.appointment.findMany({
-      where: { shopId: shop.id, startAt: { lt: end }, endAt: { gt: start } },
+      where: { shopId: shop.id, startAt: { lt: end }, endAt: { gt: start }, ...scope },
       include: appointmentInclude,
       orderBy: { startAt: "asc" },
     }),
     db.timeBlock.findMany({
-      where: { shopId: shop.id, startAt: { lt: end }, endAt: { gt: start } },
+      where: { shopId: shop.id, startAt: { lt: end }, endAt: { gt: start }, ...scope },
       orderBy: { startAt: "asc" },
     }),
     db.appointment.findMany({
@@ -64,11 +67,12 @@ export default async function AgendaPage({ searchParams }: PageProps<"/painel/ag
         shopId: shop.id,
         startAt: { gte: calendarStart, lt: calendarEnd },
         status: { notIn: ["CANCELED", "EXPIRED"] },
+        ...scope,
       },
       select: { startAt: true },
     }),
     db.workingHour.findMany({
-      where: { professional: { shopId: shop.id, active: true } },
+      where: { professional: { shopId: shop.id, active: true, ...own } },
       select: { weekday: true },
       distinct: ["weekday"],
     }),
@@ -104,12 +108,21 @@ export default async function AgendaPage({ searchParams }: PageProps<"/painel/ag
       <PageHeader
         title={formatDateLong(date)}
         description={
-          <>
-            {active.length} agendamento(s) · previsto {formatMoney(expected)} · recebido {formatMoney(received)}
-          </>
+          isOwner(user) ? (
+            <>
+              {active.length} agendamento(s) · previsto {formatMoney(expected)} · recebido {formatMoney(received)}
+            </>
+          ) : (
+            <>
+              {active.length} agendamento(s) · sua agenda
+            </>
+          )
         }
         actions={
           <>
+            <LinkButton href={`/painel/lembretes?data=${date}`} variant="secondary">
+              <BellRing className="size-4" aria-hidden /> Lembretes
+            </LinkButton>
             <LinkButton href={`/painel/agenda/bloquear?data=${date}`} variant="secondary">
               <Ban className="size-4" aria-hidden /> Bloquear horário
             </LinkButton>

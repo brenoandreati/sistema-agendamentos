@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { ActionForm, SubmitButton } from "@/components/forms";
 import { Card, Field, Input, PageHeader, Select } from "@/components/ui";
-import { requireUser } from "@/lib/auth";
+import { requireOwner } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { formatPhone, PAYMENT_METHOD } from "@/lib/format";
 import { isDateStr, todayStr } from "@/lib/time";
@@ -10,7 +10,7 @@ import { registerIncome } from "../actions";
 export const metadata: Metadata = { title: "Entrada avulsa" };
 
 export default async function IncomePage({ searchParams }: PageProps<"/painel/financeiro/entrada">) {
-  const { shop } = await requireUser();
+  const { shop } = await requireOwner();
   const { data } = await searchParams;
   const date = isDateStr(data) ? data : todayStr(shop.timezone);
   const clients = await db.client.findMany({ where: { shopId: shop.id }, orderBy: { name: "asc" }, select: { id: true, name: true, phone: true } });

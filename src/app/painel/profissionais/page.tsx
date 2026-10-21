@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { Plus } from "lucide-react";
 import { Badge, Card, LinkButton, PageHeader } from "@/components/ui";
-import { requireUser } from "@/lib/auth";
+import { requireOwner } from "@/lib/auth";
 import { NICHES } from "@/config/niches";
 import { db } from "@/lib/db";
 import { minutesToHHMM, WEEKDAYS } from "@/lib/time";
@@ -10,13 +10,14 @@ import { minutesToHHMM, WEEKDAYS } from "@/lib/time";
 export const metadata: Metadata = { title: "Profissionais" };
 
 export default async function ProfessionalsPage() {
-  const { shopId, shop } = await requireUser();
+  const { shopId, shop } = await requireOwner();
   const professionals = await db.professional.findMany({
     where: { shopId },
     orderBy: [{ active: "desc" }, { sortOrder: "asc" }],
     include: {
       workingHours: true,
       services: { where: { active: true }, select: { name: true }, orderBy: { sortOrder: "asc" } },
+      user: { select: { id: true } },
     },
   });
 
@@ -44,6 +45,7 @@ export default async function ProfessionalsPage() {
                   {p.name}
                   {!p.active && <Badge>Inativo</Badge>}
                   {p.active && !p.bookableOnline && <Badge tone="warning">Fora do agendamento online</Badge>}
+                  {p.active && p.user && <Badge tone="info">Tem login</Badge>}
                 </p>
                 <p className="truncate text-sm text-muted">
                   {days.length

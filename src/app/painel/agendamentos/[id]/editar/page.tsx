@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/ui";
-import { requireUser } from "@/lib/auth";
+import { agendaScope, requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { formatTime, toDateStr } from "@/lib/time";
 import { AppointmentForm } from "../../../agenda/appointment-form";
@@ -11,10 +11,12 @@ export const metadata: Metadata = { title: "Remarcar" };
 
 export default async function EditAppointmentPage({ params }: PageProps<"/painel/agendamentos/[id]/editar">) {
   const { id } = await params;
-  const { shop } = await requireUser();
-  const appointment = await db.appointment.findFirst({ where: { id, shopId: shop.id }, include: { services: true } });
+  const user = await requireUser();
+  const { shop } = user;
+  const scope = agendaScope(user);
+  const appointment = await db.appointment.findFirst({ where: { id, shopId: shop.id, ...scope }, include: { services: true } });
   if (!appointment) notFound();
-  const options = await appointmentFormOptions(shop.id);
+  const options = await appointmentFormOptions(shop.id, scope);
 
   return (
     <>

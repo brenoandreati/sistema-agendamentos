@@ -16,16 +16,16 @@ O README.md explica o que o sistema faz e como publicar; leia antes de mudar alg
 ## Produção
 - Cloudflare Worker `arvan-agendamentos`: https://arvan-agendamentos.brenoandreati.workers.dev
   - Conta (account id): c7692f549ea764de8cb3822715354691
-  - Segredos já configurados: DATABASE_URL, AUTH_SECRET, APP_URL, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, ADMIN_EMAILS.
-    Falta SUPPORT_WHATSAPP (o Breno vai mandar o número).
+  - Segredos já configurados: DATABASE_URL, AUTH_SECRET, APP_URL, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, ADMIN_EMAILS,
+    SUPPORT_WHATSAPP (27999715520).
   - Publicar (o token vem da variável de ambiente CLOUDFLARE_API_TOKEN da sessão):
     `CLOUDFLARE_ACCOUNT_ID=c7692f549ea764de8cb3822715354691 npx opennextjs-cloudflare build && CLOUDFLARE_ACCOUNT_ID=c7692f549ea764de8cb3822715354691 npx opennextjs-cloudflare deploy`
-  - Pacote atual ~2,5 MB gzip (limite do plano grátis: 3 MB). Plano grátis limita CPU; recomendado o pago (US$ 5).
+  - Pacote atual ~2,45 MB gzip (limite do plano grátis: 3 MB). Plano grátis limita CPU; recomendado o pago (US$ 5).
   - Logs: observability ligado (API `workers/observability/telemetry/query`). Esta sessão não acessa *.workers.dev.
 - Banco: Neon, projeto `rough-dream-55674160`, banco `arvan`, região sa-east-1 (São Paulo).
   - Migrações são aplicadas pelo Neon MCP (`run_sql_transaction`) com o SQL de `prisma/migrations/<nome>/migration.sql`
     + um INSERT em `_prisma_migrations` (id uuid, checksum = sha256 do arquivo, migration_name, applied_steps_count 1).
-  - Já aplicadas: init, tipo_de_negocio_e_conta_de_cliente, demonstracao, piloto.
+  - Já aplicadas: init, tipo_de_negocio_e_conta_de_cliente, demonstracao, piloto, equipe_lembretes_despesas.
 
 ## Rodar e testar aqui
 - Postgres local: `service postgresql start` (para sozinho às vezes). Banco `arvan_dev`, usuário/senha `barber`.
@@ -44,13 +44,25 @@ O README.md explica o que o sistema faz e como publicar; leia antes de mudar alg
 - Avisos no celular: Web Push próprio em `src/lib/web-push.ts` (testado contra a biblioteca http_ece), envio com `after()`.
 - /admin só para e-mails em ADMIN_EMAILS (conta de negócio com esse e-mail). Senha esquecida = link de uso único gerado no /admin.
 - Demonstração em /demonstracao: um negócio por área, dados refeitos a cada 12 h, configurações e catálogo travados.
+  Tem despesas fictícias (aluguel e internet como fixas) e não deixa criar login de profissional.
+- Login de profissional (`Role.STAFF`, `User.professionalId`): o dono cria em Profissionais → editar → "Acesso ao painel"
+  (link de uso único para criar a senha). Telas/ações só do dono usam `requireOwner()`; as compartilhadas (início, agenda,
+  agendamento, bloqueio, lembretes) filtram com `agendaScope(user)`. Profissional não vê dinheiro do negócio nem apaga pagamento.
+  Avisos no celular vão para o dono + o profissional do agendamento.
+- Lembretes (/painel/lembretes): lista com botão de WhatsApp (wa.me, sem API paga), marca `Appointment.reminderSentAt`
+  (volta a vazio quando o horário muda). A mensagem leva o link do agendamento quando o cliente pode cancelar/remarcar.
+- Remarcar pelo cliente: mesmo prazo de `cancelNoticeMin`, só CONFIRMED, mesmo profissional e mesma duração
+  (`customerReschedulePolicy`). Pagamento continua ligado ao agendamento.
+- Despesas: `Expense` + `RecurringExpense` (fixas). `syncRecurringExpenses` lança os meses que chegaram ao abrir o
+  financeiro/planilha (conditional update em `nextDate` evita lançar em dobro). Lucro = recebido − despesas.
 
 ## Pendências (out/2026)
-1. Breno criar conta de negócio com o e-mail dele para abrir o /admin.
-2. Breno mandar o WhatsApp do suporte → configurar SUPPORT_WHATSAPP no Worker.
+1. Conferir se o /admin abre com a conta do Breno (a conta existe, negócio "arvan"; o e-mail precisa estar em ADMIN_EMAILS).
+2. ~~WhatsApp do suporte~~ feito (out/2026).
 3. Testar no celular: ligar avisos e Pix real de R$ 1 com Mercado Pago conectado.
 4. Decidir domínio próprio antes de divulgar links; depois trocar APP_URL.
 5. Ativar plano pago do Cloudflare durante o piloto.
-6. studio-joelma-santos (pessoa real testando) tem 2 pagamentos "demo" antigos, de antes da correção: perguntar ao Breno se pode apagar.
+6. ~~Pagamentos "demo" antigos do studio-joelma-santos~~ apagados com autorização do Breno (out/2026).
 7. Termos e privacidade são texto base: recomendar revisão por advogado antes de cobrar.
-8. Ideias ainda não feitas: lembrete automático por WhatsApp, login por profissional, remarcar pelo cliente, despesas/lucro.
+8. Feito (out/2026): lista de lembretes (o Breno escolheu a versão grátis, sem envio automático), login por profissional,
+   remarcar pelo cliente, despesas/lucro. Se um dia quiser lembrete automático: WhatsApp oficial da Meta (pago por mensagem).

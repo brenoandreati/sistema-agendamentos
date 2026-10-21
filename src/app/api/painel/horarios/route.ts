@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { db } from "@/lib/db";
-import { getCurrentUser } from "@/lib/auth";
+import { agendaScope, getCurrentUser } from "@/lib/auth";
 import { getDayAvailability } from "@/lib/scheduling";
 import { isDateStr } from "@/lib/time";
 
@@ -18,6 +18,8 @@ export async function GET(request: NextRequest) {
   }
 
   const shop = user.shop;
+  const scope = agendaScope(user);
+  if (scope.professionalId && scope.professionalId !== professionalId) return NextResponse.json({ slots: [] });
   const professional = await db.professional.findFirst({ where: { id: professionalId, shopId: shop.id } });
   if (!professional) return NextResponse.json({ slots: [] });
 

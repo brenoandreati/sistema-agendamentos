@@ -3,9 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { requireUser } from "@/lib/auth";
+import { requireOwner } from "@/lib/auth";
 import { DEMO_LOCKED } from "@/config/demo";
-import { fail, optionalText, text, type ActionState } from "@/lib/action";
+import { EMAIL_RE, fail, isReservedEmail, optionalText, text, type ActionState } from "@/lib/action";
+import { createPasswordReset } from "@/lib/admin";
+import { hashPassword } from "@/lib/password";
+import { appBaseUrl } from "@/lib/payments";
+import { toBase64Url } from "@/lib/encoding";
 import { isHexColor, onlyDigits } from "@/lib/format";
 import { PROFESSIONAL_COLORS } from "@/lib/defaults";
 import { hhmmToMinutes, WEEKDAYS } from "@/lib/time";
@@ -38,7 +42,7 @@ function readWorkingHours(form: FormData): Hour[] | string {
 }
 
 export async function saveProfessional(_: ActionState, form: FormData): Promise<ActionState> {
-  const { shopId, shop } = await requireUser();
+  const { shopId, shop } = await requireOwner();
   if (shop.isDemo) return fail(DEMO_LOCKED);
   const id = text(form, "id");
   const name = text(form, "name");
@@ -86,7 +90,7 @@ export async function saveProfessional(_: ActionState, form: FormData): Promise<
 }
 
 export async function deleteProfessional(_: ActionState, form: FormData): Promise<ActionState> {
-  const { shopId, shop } = await requireUser();
+  const { shopId, shop } = await requireOwner();
   if (shop.isDemo) return fail(DEMO_LOCKED);
   const id = text(form, "id");
   const professional = await db.professional.findFirst({
@@ -102,4 +106,44 @@ export async function deleteProfessional(_: ActionState, form: FormData): Promis
   }
   revalidatePath("/painel", "layout");
   redirect("/painel/profissionais");
+}
+
+export type StaffAccessResult = { url?: string; hours?: number; email?: string; error?: string };
+
+/**
+ * Login do profissional na agenda dele. Sem login ainda, cria com o e-mail informado;
+ * com login, só gera um link novo. O profissional cria a própria senha pelo link (uso único).
+ */
+export async function staffAccessLink(professionalId: string, emailInput?: string): Promise<StaffAccessResult> {
+  const { shopId, shop } = await requireOwner();
+  if (shop.isDemo) return { error: DEMO_LOCKED };
+  const professional = await db.professional.findFirst({ where: { id: String(professionalId), shopId }, include: { user: true } });
+  if (!professional) return { error: "Profissional não encontrado." };
+  if (!professional.active) return { error: "Ative o profissional antes de criar o acesso." };
+
+  let user = professional.user;
+  if (!user) {
+    const email = String(emailInput ?? "").trim().toLowerCase().slice(0, 254);
+    if (!EMAIL_RE.test(email) || isReservedEmail(email)) return { error: "Informe um e-mail válido." };
+    if (await db.user.findUnique({ where: { email }, select: { id: true } })) {
+      return { error: "Esse e-mail já tem um login no Arvan. Use outro e-mail." };
+    }
+    // Senha aleatória que ninguém conhece: o profissional escolhe a dele pelo link.
+    const passwordHash = await hashPassword(toBase64Url(crypto.getRandomValues(new Uint8Array(32))));
+    user = await db.user.create({
+      data: { shopId, name: professional.name, email, passwordHash, role: "STAFF", professionalId: professional.id },
+    });
+    revalidatePath("/painel/profissionais");
+  }
+  const reset = await createPasswordReset({ userId: user.id });
+  return { url: `${await appBaseUrl()}/redefinir-senha?codigo=${reset.code}`, hours: reset.hours, email: user.email };
+}
+
+/** Tira o login do profissional. A agenda e o histórico dele continuam. */
+export async function removeStaffAccess(_: ActionState, form: FormData): Promise<ActionState> {
+  const { shopId, shop } = await requireOwner();
+  if (shop.isDemo) return fail(DEMO_LOCKED);
+  await db.user.deleteMany({ where: { shopId, role: "STAFF", professionalId: text(form, "professionalId") } });
+  revalidatePath("/painel/profissionais", "layout");
+  return { ok: true, message: "Acesso removido. O profissional não consegue mais entrar." };
 }

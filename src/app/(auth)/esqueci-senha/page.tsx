@@ -28,6 +28,12 @@ export default async function ForgotPasswordPage({ searchParams }: PageProps<"/e
       ) : (
         <p className="mt-5 rounded-control bg-surface-2 p-3 text-sm">Fale com a pessoa que te passou o acesso ao Arvan.</p>
       )}
+      {!customer && (
+        <p className="mt-4 text-sm text-muted">
+          Trabalha num negócio que usa o Arvan e entra só na sua agenda? Peça ao dono do negócio: ele gera um link novo para você na
+          hora.
+        </p>
+      )}
       <p className="mt-5 text-center text-sm">
         <Link href={customer ? "/cliente" : "/entrar"} className="text-muted hover:text-fg hover:underline">
           Voltar

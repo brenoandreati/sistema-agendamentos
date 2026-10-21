@@ -19,7 +19,7 @@ enum Niche {
 
 enum Role {
   OWNER
-  STAFF
+  STAFF // profissional da equipe: só vê e mexe na própria agenda
 }
 
 /// Como o cliente paga ao agendar pela página pública.
@@ -94,26 +94,31 @@ model Shop {
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
-  users         User[]
-  professionals Professional[]
-  services      Service[]
-  clients       Client[]
-  appointments  Appointment[]
-  timeBlocks    TimeBlock[]
-  payments      Payment[]
+  users             User[]
+  professionals     Professional[]
+  services          Service[]
+  clients           Client[]
+  appointments      Appointment[]
+  timeBlocks        TimeBlock[]
+  payments          Payment[]
+  expenses          Expense[]
+  recurringExpenses RecurringExpense[]
 }
 
 model User {
-  id             String   @id @default(cuid())
+  id             String        @id @default(cuid())
   shopId         String
-  shop           Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  shop           Shop          @relation(fields: [shopId], references: [id], onDelete: Cascade)
   name           String
-  email          String   @unique
+  email          String        @unique
   passwordHash   String
-  role           Role     @default(OWNER)
+  role           Role          @default(OWNER)
+  /// Profissional da agenda que este login acessa (só para STAFF).
+  professionalId String?       @unique
+  professional   Professional? @relation(fields: [professionalId], references: [id], onDelete: Cascade)
   /// Muda quando a senha muda: derruba os logins abertos em outros aparelhos.
-  sessionVersion Int      @default(0)
-  createdAt      DateTime @default(now())
+  sessionVersion Int           @default(0)
+  createdAt      DateTime      @default(now())
 
   pushSubscriptions PushSubscription[]
   passwordResets    PasswordReset[]
@@ -161,6 +166,8 @@ model Professional {
   services     Service[]
   appointments Appointment[]
   timeBlocks   TimeBlock[]
+  /// Login do profissional no painel, se o dono criou.
+  user         User?
 
   @@index([shopId])
 }
@@ -269,6 +276,8 @@ model Appointment {
   holdExpiresAt  DateTime?
   /// Token para o cliente acompanhar o agendamento sem login.
   publicToken    String            @unique @default(uuid())
+  /// Quando o lembrete foi enviado pelo WhatsApp (pela lista de lembretes). Volta a vazio se o horário mudar de dia.
+  reminderSentAt DateTime?
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
 
@@ -315,4 +324,55 @@ model Payment {
 
   @@index([shopId, paidAt])
   @@index([appointmentId])
+}
+
+enum ExpenseCategory {
+  RENT // aluguel
+  PRODUCTS // produtos e materiais
+  BILLS // luz, água, internet, telefone
+  TEAM // salários, comissões, diárias
+  TAXES // impostos e taxas (maquininha, MEI)
+  MARKETING // divulgação
+  EQUIPMENT // equipamentos e manutenção
+  OTHER
+}
+
+/// Dinheiro que saiu do negócio. Entra no cálculo do lucro do financeiro.
+model Expense {
+  id          String            @id @default(cuid())
+  shopId      String
+  shop        Shop              @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  description String
+  category    ExpenseCategory   @default(OTHER)
+  amountCents Int
+  /// Dia da despesa (meio-dia no fuso do negócio).
+  date        DateTime
+  /// Despesa fixa que gerou esta (repete todo mês).
+  recurringId String?
+  recurring   RecurringExpense? @relation(fields: [recurringId], references: [id], onDelete: SetNull)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@unique([recurringId, date])
+  @@index([shopId, date])
+}
+
+/// Despesa fixa: o sistema lança uma despesa por mês, no mesmo dia, quando a data chega.
+model RecurringExpense {
+  id          String          @id @default(cuid())
+  shopId      String
+  shop        Shop            @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  description String
+  category    ExpenseCategory @default(OTHER)
+  amountCents Int
+  /// Dia do mês (1 a 31). Em meses mais curtos, cai no último dia.
+  dayOfMonth  Int
+  /// Próxima data a lançar ("AAAA-MM-DD").
+  nextDate    String
+  active      Boolean         @default(true)
+  createdAt   DateTime        @default(now())
+
+  expenses Expense[]
+
+  @@index([shopId, active])
 }

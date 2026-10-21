@@ -27,3 +27,23 @@ export function customerCancelPolicy(
   }
   return { allowed: true, until };
 }
+
+/**
+ * Regras para o cliente remarcar pelo site: mesmo prazo do cancelamento, só horário já confirmado
+ * (quem ainda não pagou escolhe outro horário fazendo um agendamento novo) e com o mesmo profissional.
+ */
+export function customerReschedulePolicy(
+  appointment: Appointment & { professional: { active: boolean; bookableOnline: boolean } },
+  shop: { cancelNoticeMin: number | null },
+  now = new Date(),
+): { allowed: true; until: string } | { allowed: false; reason: string } {
+  if (appointment.status !== "CONFIRMED") return { allowed: false, reason: "Este agendamento não pode mais ser remarcado." };
+  if (shop.cancelNoticeMin === null || !appointment.professional.active || !appointment.professional.bookableOnline) {
+    return { allowed: false, reason: "Para remarcar, fale com o negócio pelo WhatsApp." };
+  }
+  const until = noticeLabel(shop.cancelNoticeMin);
+  if ((appointment.startAt.getTime() - now.getTime()) / 60_000 < shop.cancelNoticeMin) {
+    return { allowed: false, reason: `Dá para remarcar pelo site até ${until} antes do horário. Agora, fale com o negócio pelo WhatsApp.` };
+  }
+  return { allowed: true, until };
+}

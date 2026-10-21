@@ -3,7 +3,7 @@ import type { Niche } from "@prisma/client";
 import { DEMO_SHOPS } from "@/config/demo";
 import { NICHE_ORDER, NICHES } from "@/config/niches";
 import { db } from "./db";
-import { buildDemoAgenda } from "./demo-data";
+import { buildDemoAgenda, buildDemoExpenses } from "./demo-data";
 import { defaultWorkingHours } from "./defaults";
 import { todayStr } from "./time";
 
@@ -61,6 +61,8 @@ export async function ensureDemoShop(niche: Niche, { reset = false } = {}) {
         });
       } else {
         await tx.payment.deleteMany({ where: { shopId: shop.id } });
+        await tx.expense.deleteMany({ where: { shopId: shop.id } });
+        await tx.recurringExpense.deleteMany({ where: { shopId: shop.id } });
         await tx.appointment.deleteMany({ where: { shopId: shop.id } });
         await tx.timeBlock.deleteMany({ where: { shopId: shop.id } });
         await tx.client.deleteMany({ where: { shopId: shop.id } });
@@ -136,6 +138,14 @@ export async function ensureDemoShop(niche: Niche, { reset = false } = {}) {
       await tx.appointment.createMany({ data: agenda.appointments });
       await tx.appointmentService.createMany({ data: agenda.appointmentServices });
       await tx.payment.createMany({ data: agenda.payments });
+      const costs = buildDemoExpenses({
+        shopId: shop.id,
+        today: todayStr(TIMEZONE),
+        timezone: TIMEZONE,
+        revenueCents: agenda.payments.reduce((sum, p) => sum + p.amountCents, 0),
+      });
+      await tx.recurringExpense.createMany({ data: costs.recurring });
+      await tx.expense.createMany({ data: costs.expenses });
       await tx.shop.update({ where: { id: shop.id }, data: { demoResetAt: new Date() } });
 
       return { shopId: shop.id, userId: user.id, slug: config.slug };

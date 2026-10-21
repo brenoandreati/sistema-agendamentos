@@ -7,7 +7,7 @@ import { NICHE_ORDER, NICHES } from "@/config/niches";
 import { ActionForm, SubmitButton } from "@/components/forms";
 import { Badge, Card, Checkbox, Field, Input, Select } from "@/components/ui";
 import { PageHeader } from "@/components/ui";
-import { requireUser } from "@/lib/auth";
+import { requireOwner } from "@/lib/auth";
 import { CANCEL_NOTICES, TIMEZONES } from "@/lib/defaults";
 import { formatPhone } from "@/lib/format";
 import { pushPublicKey } from "@/lib/notify";
@@ -29,7 +29,7 @@ const NOTICES = [
 const HOLDS = [10, 15, 20, 30, 60];
 
 export default async function SettingsPage() {
-  const user = await requireUser();
+  const user = await requireOwner();
   const { shop } = user;
   const bookingPath = `/agendar/${shop.slug}`;
   const hasOwnToken = Boolean(shop.mpAccessToken);
@@ -135,7 +135,7 @@ export default async function SettingsPage() {
               </Field>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Cancelamento pelo cliente" hint="O cliente cancela pelo link do agendamento e você recebe um aviso.">
+              <Field label="Cliente cancela ou remarca pelo site" hint="Pelo link do agendamento (que vai no lembrete). Você recebe um aviso.">
                 <Select name="cancelNoticeMin" defaultValue={shop.cancelNoticeMin ?? "off"}>
                   {CANCEL_NOTICES.map((n) => (
                     <option key={n.label} value={n.value ?? "off"}>

@@ -16,7 +16,9 @@ export default async function ResetPasswordPage({ searchParams }: PageProps<"/re
     return (
       <Card className="p-6 text-center">
         <h1 className="text-lg font-semibold">Este link não vale mais</h1>
-        <p className="mt-2 text-sm text-muted">Ele já foi usado ou passou do prazo. Peça um link novo ao suporte.</p>
+        <p className="mt-2 text-sm text-muted">
+          Ele já foi usado ou passou do prazo. Peça um link novo ao suporte ou, se você é da equipe de um negócio, ao dono do negócio.
+        </p>
         <Link href="/esqueci-senha" className="mt-4 inline-block text-sm font-medium text-brand hover:underline">
           Falar com o suporte
         </Link>
@@ -29,8 +31,9 @@ export default async function ResetPasswordPage({ searchParams }: PageProps<"/re
     <Card className="p-6">
       <h1 className="text-lg font-semibold">Criar senha nova</h1>
       <p className="mt-1 mb-5 text-sm text-muted">
-        Olá, {name}! Escolha uma senha nova para {reset.user ? "o painel do seu negócio" : "a sua conta"}. Os aparelhos que
-        estavam conectados vão precisar entrar de novo.
+        Olá, {name}! Escolha uma senha nova para{" "}
+        {reset.user ? (reset.user.role === "STAFF" ? `a sua agenda em ${reset.user.shop.name}` : "o painel do seu negócio") : "a sua conta"}
+        {reset.user && <> (o login é o e-mail {reset.user.email})</>}. Os aparelhos que estavam conectados vão precisar entrar de novo.
       </p>
       <ActionForm action={resetPassword} className="flex flex-col gap-4">
         <input type="hidden" name="codigo" value={code} />

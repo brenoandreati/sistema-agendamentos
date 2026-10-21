@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
-import { CalendarPlus, CircleCheck, Clock, MessageCircle, XCircle } from "lucide-react";
+import { CalendarClock, CalendarPlus, CircleCheck, Clock, MessageCircle, XCircle } from "lucide-react";
 import { ActionForm, SubmitButton } from "@/components/forms";
 import { buttonClass, Card, LinkButton } from "@/components/ui";
-import { customerCancelPolicy } from "@/lib/cancellation";
+import { customerCancelPolicy, customerReschedulePolicy } from "@/lib/cancellation";
 import { db } from "@/lib/db";
 import { whatsappLink } from "@/lib/format";
 import { formatMoney } from "@/lib/money";
@@ -42,6 +42,7 @@ export default async function BookingStatusPage({ params, searchParams }: PagePr
     include: { professional: true, services: true, payments: true },
   });
   if (!appointment) notFound();
+  const reschedule = customerReschedulePolicy(appointment, shop);
 
   const tz = shop.timezone;
   const date = toDateStr(appointment.startAt, tz);
@@ -54,15 +55,22 @@ export default async function BookingStatusPage({ params, searchParams }: PagePr
     appointment.status === "CONFIRMED" || appointment.status === "PENDING_PAYMENT" ? (
       policy.allowed ? (
         <div className="flex flex-col items-center gap-1 text-center">
-          <ActionForm action={cancelByCustomer} confirm="Cancelar este agendamento? O horário fica livre para outra pessoa.">
-            <input type="hidden" name="token" value={appointment.publicToken} />
-            <SubmitButton variant="ghost" size="sm" pendingText="Cancelando...">
-              Cancelar agendamento
-            </SubmitButton>
-          </ActionForm>
+          <div className="flex flex-wrap justify-center gap-2">
+            {reschedule.allowed && (
+              <LinkButton href={`/agendar/${shop.slug}/agendamento/${appointment.publicToken}/remarcar`} variant="secondary" size="sm">
+                <CalendarClock className="size-4" aria-hidden /> Remarcar
+              </LinkButton>
+            )}
+            <ActionForm action={cancelByCustomer} confirm="Cancelar este agendamento? O horário fica livre para outra pessoa.">
+              <input type="hidden" name="token" value={appointment.publicToken} />
+              <SubmitButton variant="ghost" size="sm" pendingText="Cancelando...">
+                Cancelar agendamento
+              </SubmitButton>
+            </ActionForm>
+          </div>
           <p className="text-xs text-muted">
-            Pode cancelar por aqui até {policy.until} antes.
-            {paid > 0 && ` O valor pago online (${formatMoney(paid)}) é devolvido por ${shop.name}.`}
+            Pode {reschedule.allowed ? "remarcar ou cancelar" : "cancelar"} por aqui até {policy.until} antes.
+            {paid > 0 && ` Se cancelar, o valor pago online (${formatMoney(paid)}) é devolvido por ${shop.name}.`}
           </p>
         </div>
       ) : (
@@ -138,8 +146,11 @@ export default async function BookingStatusPage({ params, searchParams }: PagePr
 
   return (
     <div className="flex flex-col gap-4">
-      <StatusHeader icon={<CircleCheck className="size-10 text-emerald-500" />} title="Agendamento confirmado!">
-        {shop.name} te espera!
+      <StatusHeader
+        icon={<CircleCheck className="size-10 text-emerald-500" />}
+        title={query.remarcado === "1" && appointment.status === "CONFIRMED" ? "Horário remarcado!" : "Agendamento confirmado!"}
+      >
+        {query.remarcado === "1" && appointment.status === "CONFIRMED" ? `${shop.name} já foi avisado do novo horário.` : `${shop.name} te espera!`}
       </StatusHeader>
       {summary}
       <div className="grid gap-2 sm:grid-cols-2">

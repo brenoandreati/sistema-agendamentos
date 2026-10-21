@@ -18,7 +18,7 @@ export const TIMEZONES = [
   { value: "America/Noronha", label: "1 hora a mais (Fernando de Noronha)" },
 ];
 
-/** Até quando o cliente pode cancelar pelo site. `null` = só falando com o negócio. */
+/** Até quando o cliente pode cancelar ou remarcar pelo site. `null` = só falando com o negócio. */
 export const CANCEL_NOTICES = [
   { value: 60, label: "Até 1 hora antes" },
   { value: 120, label: "Até 2 horas antes" },
@@ -26,5 +26,5 @@ export const CANCEL_NOTICES = [
   { value: 720, label: "Até 12 horas antes" },
   { value: 1440, label: "Até 1 dia antes" },
   { value: 2880, label: "Até 2 dias antes" },
-  { value: null, label: "Não pode cancelar pelo site" },
+  { value: null, label: "Só falando comigo (não pelo site)" },
 ];

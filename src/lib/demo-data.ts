@@ -1,6 +1,7 @@
-import type { AppointmentStatus, PaymentMethod, PaymentMode, Prisma } from "@prisma/client";
+import type { AppointmentStatus, ExpenseCategory, PaymentMethod, PaymentMode, Prisma } from "@prisma/client";
+import { dateInMonth, nextMonthlyDate } from "./expenses";
 import { onlineAmountCents } from "./pricing";
-import { addDays, weekdayOf, zonedToUtc } from "./time";
+import { addDays, addMonths, weekdayOf, zonedToUtc } from "./time";
 
 type Input = {
   shopId: string;
@@ -131,4 +132,47 @@ export function buildDemoAgenda(input: Input) {
   }
 
   return { appointments, appointmentServices, payments };
+}
+
+/**
+ * Despesas fictícias dos últimos 30 dias, proporcionais ao que entrou, para o lucro da demonstração
+ * fazer sentido. Aluguel e internet viram despesas fixas (repetem todo mês).
+ */
+export function buildDemoExpenses(input: { shopId: string; today: string; timezone: string; revenueCents: number; newId?: () => string }) {
+  const { shopId, today, timezone, revenueCents } = input;
+  const newId = input.newId ?? (() => crypto.randomUUID());
+  const round = (cents: number, step = 1000) => Math.max(step, Math.round(cents / step) * step);
+  // Último dia do mês `day` que já passou (este mês ou o anterior).
+  const lastDay = (day: number) => {
+    const thisMonth = dateInMonth(today, day);
+    return thisMonth <= today ? thisMonth : dateInMonth(addMonths(today, -1), day);
+  };
+
+  const recurring: Prisma.RecurringExpenseCreateManyInput[] = [];
+  const expenses: Prisma.ExpenseCreateManyInput[] = [];
+  const add = (description: string, category: ExpenseCategory, amountCents: number, date: string, monthlyDay?: number) => {
+    let recurringId: string | null = null;
+    if (monthlyDay) {
+      recurringId = newId();
+      recurring.push({
+        id: recurringId,
+        shopId,
+        description,
+        category,
+        amountCents,
+        dayOfMonth: monthlyDay,
+        nextDate: nextMonthlyDate(monthlyDay, date),
+      });
+    }
+    expenses.push({ shopId, description, category, amountCents, recurringId, date: zonedToUtc(date, 12 * 60, timezone) });
+  };
+
+  add("Aluguel do espaço", "RENT", round(revenueCents * 0.18, 5000), lastDay(5), 5);
+  add("Internet", "BILLS", 11990, lastDay(10), 10);
+  add("Conta de luz", "BILLS", round(revenueCents * 0.03), addDays(today, -12));
+  add("Produtos e materiais", "PRODUCTS", round(revenueCents * 0.05), addDays(today, -24));
+  add("Produtos e materiais", "PRODUCTS", round(revenueCents * 0.04), addDays(today, -9));
+  add("Anúncio no Instagram", "MARKETING", round(revenueCents * 0.02), addDays(today, -16));
+  add("Taxas da maquininha", "TAXES", round(revenueCents * 0.015, 100), addDays(today, -2));
+  return { recurring, expenses };
 }

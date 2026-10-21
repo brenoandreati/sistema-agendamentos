@@ -1,12 +1,9 @@
 import { notFound } from "next/navigation";
 import { getCustomer } from "@/lib/auth";
-import { getBookingCatalog } from "@/lib/booking";
+import { bookingDays, getBookingCatalog } from "@/lib/booking";
 import { chargesOnline } from "@/lib/payments";
-import { addDays, todayStr, weekdayOf } from "@/lib/time";
+import { todayStr } from "@/lib/time";
 import { BookingFlow } from "./booking-flow";
-
-const WEEKDAY_SHORT = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
-const MONTH_SHORT = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 
 export default async function BookingPage({ params }: PageProps<"/agendar/[slug]">) {
   const { slug } = await params;
@@ -19,17 +16,7 @@ export default async function BookingPage({ params }: PageProps<"/agendar/[slug]
     (p) => p.services.some((s) => activeIds.has(s.id)) && p.workingHours.length > 0,
   );
 
-  const today = todayStr(shop.timezone);
-  const days = Array.from({ length: Math.min(shop.maxAdvanceDays, 90) + 1 }, (_, i) => {
-    const date = addDays(today, i);
-    return {
-      date,
-      weekday: weekdayOf(date),
-      label: i === 0 ? "Hoje" : i === 1 ? "Amanhã" : WEEKDAY_SHORT[weekdayOf(date)],
-      day: date.slice(8),
-      month: MONTH_SHORT[Number(date.slice(5, 7)) - 1],
-    };
-  });
+  const days = bookingDays(todayStr(shop.timezone), shop.maxAdvanceDays);
 
   return (
     <BookingFlow

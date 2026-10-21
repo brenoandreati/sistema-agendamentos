@@ -50,9 +50,11 @@ async function deliver(subscriptions: (PushTarget & { id: string })[], message: 
   );
 }
 
-/** Avisa todos os aparelhos do dono do negócio. */
-export async function notifyShop(shopId: string, message: Message) {
-  const subscriptions = await db.pushSubscription.findMany({ where: { user: { shopId } } });
+/** Avisa os aparelhos do dono do negócio e, se informado, os do profissional do agendamento. */
+export async function notifyShop(shopId: string, message: Message, professionalId?: string) {
+  const subscriptions = await db.pushSubscription.findMany({
+    where: { user: { shopId, OR: [{ role: "OWNER" }, ...(professionalId ? [{ professionalId }] : [])] } },
+  });
   await deliver(subscriptions, message);
 }
 
@@ -67,10 +69,11 @@ const TITLES = {
   new: "Novo agendamento",
   paid: "Novo agendamento pago",
   canceled: "Cliente cancelou um horário",
+  rescheduled: "Cliente remarcou um horário",
   "paid-no-slot": "Pagamento recebido sem horário",
 };
 
-/** Avisa o dono sobre um agendamento, depois de responder ao cliente (não atrasa a tela dele). */
+/** Avisa o dono (e o profissional) sobre um agendamento, depois de responder ao cliente (não atrasa a tela dele). */
 export function notifyAppointmentLater(appointmentId: string, kind: keyof typeof TITLES) {
   const task = async () => {
     try {
@@ -81,15 +84,16 @@ export function notifyAppointmentLater(appointmentId: string, kind: keyof typeof
       if (!appointment || appointment.shop.isDemo) return;
       const tz = appointment.shop.timezone;
       const when = `${formatDateShort(toDateStr(appointment.startAt, tz))} às ${formatTime(appointment.startAt, tz)}`;
-      await notifyShop(appointment.shop.id, {
+      const message = {
         title: TITLES[kind],
         body:
           kind === "paid-no-slot"
             ? `${appointment.client.name} pagou, mas o horário de ${when} não está mais livre. Devolva o valor ou remarque.`
-            : `${appointment.client.name} · ${serviceNames(appointment)}\n${when} · com ${appointment.professional.name}`,
+            : `${appointment.client.name} · ${serviceNames(appointment)}\n${kind === "rescheduled" ? "Novo horário: " : ""}${when} · com ${appointment.professional.name}`,
         url: `/painel/agendamentos/${appointment.id}`,
         tag: appointment.id,
-      });
+      };
+      await notifyShop(appointment.shop.id, message, appointment.professionalId);
     } catch (error) {
       console.error("Falha ao avisar o negócio", error);
     }

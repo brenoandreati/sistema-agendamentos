@@ -3,22 +3,24 @@ import type { Metadata } from "next";
 import { ChevronRight, ExternalLink, LifeBuoy, LogOut, ShieldCheck } from "lucide-react";
 import { Card, PageHeader } from "@/components/ui";
 import { isAdminEmail, supportWhatsapp } from "@/lib/admin";
-import { requireUser } from "@/lib/auth";
+import { isOwner, requireUser } from "@/lib/auth";
 import { whatsappLink } from "@/lib/format";
 import { signOut } from "../../(auth)/actions";
 import { NICHES } from "@/config/niches";
-import { MORE_ITEMS, withTeamLabel } from "../nav-items";
+import { navItems, withTeamLabel } from "../nav-items";
 
 export const metadata: Metadata = { title: "Mais" };
 
 export default async function MorePage() {
   const user = await requireUser();
-  const support = supportWhatsapp();
+  const owner = isOwner(user);
+  const support = owner ? supportWhatsapp() : null;
+  const { more } = navItems(owner ? "owner" : "staff");
   return (
     <>
       <PageHeader title="Mais opções" />
       <Card className="divide-y divide-line">
-        {withTeamLabel(MORE_ITEMS, NICHES[user.shop.niche].team).map((item) => (
+        {withTeamLabel(more, NICHES[user.shop.niche].team).map((item) => (
           <Link key={item.href} href={item.href} className="flex items-center gap-3 px-4 py-3.5">
             <item.icon className="size-5 text-muted" aria-hidden />
             <span className="flex-1 font-medium">{item.label}</span>
@@ -40,7 +42,7 @@ export default async function MorePage() {
             <span className="flex-1 font-medium">Falar com o suporte</span>
           </a>
         )}
-        {isAdminEmail(user.email) && (
+        {owner && isAdminEmail(user.email) && (
           <Link href="/admin" className="flex items-center gap-3 px-4 py-3.5">
             <ShieldCheck className="size-5 text-muted" aria-hidden />
             <span className="flex-1 font-medium">Administração</span>

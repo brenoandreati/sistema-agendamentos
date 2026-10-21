@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { ExternalLink, LifeBuoy, LogOut, RotateCcw, ShieldCheck } from "lucide-react";
 import { isAdminEmail, supportWhatsapp } from "@/lib/admin";
-import { requireUser } from "@/lib/auth";
+import { isOwner, requireUser } from "@/lib/auth";
 import { brandStyle, whatsappLink } from "@/lib/format";
 import { SubmitButton } from "@/components/forms";
 import { ShopMark } from "@/components/shop-mark";
@@ -16,7 +16,9 @@ import { BottomNav, SidebarNav } from "./nav";
 export default async function PanelLayout({ children }: { children: ReactNode }) {
   const user = await requireUser();
   const { shop } = user;
-  const support = supportWhatsapp();
+  const role = isOwner(user) ? "owner" : "staff";
+  // Suporte da plataforma é para o dono; o profissional fala com o dono do negócio.
+  const support = role === "owner" ? supportWhatsapp() : null;
 
   return (
     <div style={brandStyle(shop.primaryColor)} data-niche={shop.niche} className="flex min-h-dvh flex-1 bg-bg">
@@ -28,7 +30,7 @@ export default async function PanelLayout({ children }: { children: ReactNode })
             <span className="block text-xs text-sidebar-muted">{BRAND.name}</span>
           </span>
         </Link>
-        <SidebarNav teamLabel={NICHES[shop.niche].team} />
+        <SidebarNav teamLabel={NICHES[shop.niche].team} role={role} />
         <div className="mt-auto border-t border-sidebar-line px-3 pt-4">
           <p className="truncate text-sm font-medium">{user.name}</p>
           <p className="truncate text-xs text-sidebar-muted">{shop.isDemo ? "Demonstração" : user.email}</p>
@@ -43,7 +45,7 @@ export default async function PanelLayout({ children }: { children: ReactNode })
                 <LifeBuoy className="size-4" aria-hidden /> Suporte
               </a>
             )}
-            {isAdminEmail(user.email) && (
+            {role === "owner" && isAdminEmail(user.email) && (
               <Link href="/admin" className="flex items-center gap-2 hover:text-sidebar-fg">
                 <ShieldCheck className="size-4" aria-hidden /> Administração
               </Link>
@@ -87,7 +89,7 @@ export default async function PanelLayout({ children }: { children: ReactNode })
         <main className="mx-auto w-full max-w-6xl px-4 py-6 md:px-8 md:py-8">{children}</main>
       </div>
 
-      <BottomNav />
+      <BottomNav role={role} />
     </div>
   );
 }
