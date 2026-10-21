@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
+import { DEMO_LOCKED } from "@/config/demo";
 import { fail, optionalText, text, type ActionState } from "@/lib/action";
 import { isHexColor, onlyDigits } from "@/lib/format";
 import { PROFESSIONAL_COLORS } from "@/lib/defaults";
@@ -37,7 +38,8 @@ function readWorkingHours(form: FormData): Hour[] | string {
 }
 
 export async function saveProfessional(_: ActionState, form: FormData): Promise<ActionState> {
-  const { shopId } = await requireUser();
+  const { shopId, shop } = await requireUser();
+  if (shop.isDemo) return fail(DEMO_LOCKED);
   const id = text(form, "id");
   const name = text(form, "name");
   const color = text(form, "color");
@@ -84,7 +86,8 @@ export async function saveProfessional(_: ActionState, form: FormData): Promise<
 }
 
 export async function deleteProfessional(_: ActionState, form: FormData): Promise<ActionState> {
-  const { shopId } = await requireUser();
+  const { shopId, shop } = await requireUser();
+  if (shop.isDemo) return fail(DEMO_LOCKED);
   const id = text(form, "id");
   const professional = await db.professional.findFirst({
     where: { id, shopId },

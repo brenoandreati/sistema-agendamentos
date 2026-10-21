@@ -3,18 +3,32 @@ import { headers } from "next/headers";
 import type { PaymentMethod, Shop } from "@prisma/client";
 import { db } from "./db";
 import { decryptSecret } from "./crypto";
+import { addNote } from "./format";
 import { createPreference, getPayment, toPaymentMethod } from "./mercadopago";
+import { notifyAppointmentLater } from "./notify";
+import { onlineAmountCents } from "./pricing";
+import { findConflict, lockProfessional } from "./scheduling";
 
-export { onlineAmountCents } from "./pricing";
+export { onlineAmountCents };
 
-/** Token do Mercado Pago do negócio (ou o padrão do servidor). Sem token, o sistema usa o modo demonstração. */
+/**
+ * Token do Mercado Pago do próprio negócio. Cada negócio recebe na sua conta: não existe token
+ * da plataforma. Se o token não puder ser lido (ex.: AUTH_SECRET trocado), conta como não conectado.
+ */
 export async function mercadoPagoToken(shop: Pick<Shop, "mpAccessToken" | "isDemo">): Promise<string | null> {
-  if (shop.isDemo) return null; // na demonstração o pagamento é sempre simulado
-  if (shop.mpAccessToken) {
-    const token = await decryptSecret(shop.mpAccessToken);
-    if (token) return token;
-  }
-  return process.env.MP_ACCESS_TOKEN || null;
+  if (shop.isDemo || !shop.mpAccessToken) return null; // na demonstração o pagamento é sempre simulado
+  return decryptSecret(shop.mpAccessToken);
+}
+
+/** Se o negócio cobra online de verdade (Mercado Pago conectado) ou de mentira (demonstração). */
+export async function chargesOnline(shop: Pick<Shop, "mpAccessToken" | "isDemo" | "paymentMode">) {
+  if (shop.paymentMode === "NONE") return false;
+  return shop.isDemo || Boolean(await mercadoPagoToken(shop));
+}
+
+/** Quanto o cliente paga ao agendar. Sem Mercado Pago conectado, nada: paga no local. */
+export async function chargeAtBookingCents(shop: Shop, totalCents: number) {
+  return (await chargesOnline(shop)) ? onlineAmountCents(shop, totalCents) : 0;
 }
 
 export async function appBaseUrl(): Promise<string> {
@@ -36,6 +50,7 @@ type CheckoutInput = {
 /** Cria a cobrança online e devolve o link para o cliente pagar. */
 export async function startCheckout({ shop, appointment, clientName, title, amountCents }: CheckoutInput) {
   const token = await mercadoPagoToken(shop);
+  if (!token && !shop.isDemo) throw new Error("Negócio sem Mercado Pago conectado.");
   const payment = await db.payment.create({
     data: {
       shopId: shop.id,
@@ -70,14 +85,18 @@ export async function startCheckout({ shop, appointment, clientName, title, amou
   return checkoutUrl;
 }
 
-/** Marca o pagamento como pago e confirma o agendamento. Pode ser chamado mais de uma vez. */
+/**
+ * Marca o pagamento como pago e confirma o agendamento. Pode ser chamado mais de uma vez.
+ * Se a reserva já tinha vencido e outra pessoa pegou o horário, o agendamento não é confirmado:
+ * fica na lista "Precisa de atenção" do painel para o negócio devolver o dinheiro ou remarcar.
+ */
 export async function approvePayment(
   paymentId: string,
   data: { method: PaymentMethod; providerPaymentId?: string; paidAt?: Date },
-) {
-  await db.$transaction(async (tx) => {
+): Promise<{ appointmentId: string; confirmed: boolean } | null> {
+  const result = await db.$transaction(async (tx) => {
     const payment = await tx.payment.findUnique({ where: { id: paymentId }, include: { appointment: true } });
-    if (!payment || payment.status === "APPROVED") return;
+    if (!payment || payment.status === "APPROVED") return null;
     await tx.payment.update({
       where: { id: paymentId },
       data: {
@@ -88,22 +107,46 @@ export async function approvePayment(
       },
     });
     const appointment = payment.appointment;
-    if (appointment && (appointment.status === "PENDING_PAYMENT" || appointment.status === "EXPIRED")) {
+    if (!appointment) return null;
+
+    if (appointment.status === "CANCELED") {
+      await tx.appointment.update({
+        where: { id: appointment.id },
+        data: { notes: addNote(appointment.notes, "Pagamento aprovado depois do cancelamento: devolva o valor ao cliente.") },
+      });
+      return { appointmentId: appointment.id, confirmed: false };
+    }
+    if (appointment.status !== "PENDING_PAYMENT" && appointment.status !== "EXPIRED") return null;
+
+    await lockProfessional(tx, appointment.professionalId);
+    const conflict = await findConflict(tx, {
+      professionalId: appointment.professionalId,
+      startAt: appointment.startAt,
+      endAt: appointment.endAt,
+      excludeAppointmentId: appointment.id,
+    });
+    if (conflict) {
       await tx.appointment.update({
         where: { id: appointment.id },
         data: {
-          status: "CONFIRMED",
+          status: "EXPIRED",
           holdExpiresAt: null,
-          notes:
-            appointment.status === "EXPIRED"
-              ? [appointment.notes, "Pagamento aprovado depois que a reserva expirou: confira se o horário continua livre."]
-                  .filter(Boolean)
-                  .join("\n")
-              : appointment.notes,
+          notes: addNote(
+            appointment.notes,
+            "Pagamento aprovado depois que a reserva venceu, e o horário já estava ocupado. Devolva o valor ou remarque com o cliente.",
+          ),
         },
       });
+      return { appointmentId: appointment.id, confirmed: false };
     }
+    await tx.appointment.update({
+      where: { id: appointment.id },
+      data: { status: "CONFIRMED", holdExpiresAt: null },
+    });
+    return { appointmentId: appointment.id, confirmed: true };
   });
+  if (result) notifyAppointmentLater(result.appointmentId, result.confirmed ? "paid" : "paid-no-slot");
+  return result;
 }
 
 /** Consulta um pagamento no Mercado Pago e atualiza o sistema. */
@@ -118,14 +161,39 @@ export async function syncMercadoPagoPayment(shop: Shop, providerPaymentId: stri
   });
   if (!payment) return null;
 
+  const refundedCents = Math.round((remote.transaction_amount_refunded ?? 0) * 100);
   if (remote.status === "approved") {
     await approvePayment(payment.id, {
       method: toPaymentMethod(remote),
       providerPaymentId: String(remote.id),
       paidAt: remote.date_approved ? new Date(remote.date_approved) : new Date(),
     });
+    // Estorno parcial: o pagamento continua aprovado, mas só conta o que ficou.
+    const keptCents = Math.round(remote.transaction_amount * 100) - refundedCents;
+    if (refundedCents > 0 && keptCents > 0 && keptCents !== payment.amountCents) {
+      await db.payment.update({
+        where: { id: payment.id },
+        data: { amountCents: keptCents, description: addNote(payment.description, `Estorno parcial no Mercado Pago.`) },
+      });
+    }
   } else if (remote.status === "refunded" || remote.status === "charged_back") {
-    await db.payment.update({ where: { id: payment.id }, data: { status: "REFUNDED" } });
+    if (payment.status !== "REFUNDED") {
+      await db.payment.update({ where: { id: payment.id }, data: { status: "REFUNDED" } });
+      if (payment.appointmentId) {
+        const appointment = await db.appointment.findUnique({ where: { id: payment.appointmentId }, select: { notes: true } });
+        await db.appointment.update({
+          where: { id: payment.appointmentId },
+          data: {
+            notes: addNote(
+              appointment?.notes ?? null,
+              remote.status === "charged_back"
+                ? "O cliente contestou o pagamento online no cartão (chargeback)."
+                : "Pagamento online devolvido ao cliente.",
+            ),
+          },
+        });
+      }
+    }
   } else if (payment.status === "PENDING") {
     await db.payment.update({ where: { id: payment.id }, data: { providerPaymentId: String(remote.id) } });
   }

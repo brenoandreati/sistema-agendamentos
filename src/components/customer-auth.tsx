@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { customerSignIn, customerSignUp, type CustomerProfile } from "@/app/cliente/actions";
 import { Alert } from "./forms";
 import { Button, cn, Field, Input } from "./ui";
@@ -59,19 +60,46 @@ export function CustomerAuthForms({ onDone }: { onDone: (customer: CustomerProfi
         <Field label="E-mail">
           <Input name="email" type="email" autoComplete="email" required />
         </Field>
-        <Field label="Senha" hint={tab === "criar" ? "Mínimo de 6 caracteres." : undefined}>
+        <Field label="Senha" hint={tab === "criar" ? "Mínimo de 8 caracteres." : undefined}>
           <Input
             name="password"
             type="password"
             autoComplete={tab === "criar" ? "new-password" : "current-password"}
-            minLength={tab === "criar" ? 6 : undefined}
+            minLength={tab === "criar" ? 8 : undefined}
+            maxLength={200}
             required
           />
         </Field>
+        {tab === "criar" && <TermsCheckbox />}
+        {tab === "entrar" && (
+          <Link href="/esqueci-senha?conta=cliente" className="-mt-2 text-sm text-muted hover:text-fg hover:underline">
+            Esqueci minha senha
+          </Link>
+        )}
         <Button type="submit" variant="secondary" disabled={pending}>
           {pending ? "Aguarde..." : tab === "entrar" ? "Entrar" : "Criar minha conta"}
         </Button>
       </form>
     </div>
+  );
+}
+
+/** Aceite dos termos de uso e da política de privacidade, obrigatório ao criar conta. */
+export function TermsCheckbox() {
+  return (
+    <label className="flex items-start gap-2.5 text-sm">
+      <input type="checkbox" name="aceite" required className="mt-0.5 size-4 accent-brand" />
+      <span className="text-muted">
+        Li e aceito os{" "}
+        <Link href="/termos" target="_blank" className="text-brand underline">
+          termos de uso
+        </Link>{" "}
+        e a{" "}
+        <Link href="/privacidade" target="_blank" className="text-brand underline">
+          política de privacidade
+        </Link>
+        .
+      </span>
+    </label>
   );
 }

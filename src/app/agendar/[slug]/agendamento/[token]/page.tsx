@@ -1,12 +1,15 @@
 import { notFound } from "next/navigation";
 import { CalendarPlus, CircleCheck, Clock, MessageCircle, XCircle } from "lucide-react";
+import { ActionForm, SubmitButton } from "@/components/forms";
 import { buttonClass, Card, LinkButton } from "@/components/ui";
+import { customerCancelPolicy } from "@/lib/cancellation";
 import { db } from "@/lib/db";
 import { whatsappLink } from "@/lib/format";
 import { formatMoney } from "@/lib/money";
 import { syncMercadoPagoPayment } from "@/lib/payments";
 import { expireStaleHolds } from "@/lib/scheduling";
 import { formatDateLong, formatTime, toDateStr } from "@/lib/time";
+import { cancelByCustomer } from "../../actions";
 import { AutoRefresh } from "./auto-refresh";
 
 function googleCalendarLink(input: { title: string; start: Date; end: Date; location?: string | null; details: string }) {
@@ -46,6 +49,26 @@ export default async function BookingStatusPage({ params, searchParams }: PagePr
   const pending = appointment.payments.find((p) => p.status === "PENDING" && p.checkoutUrl);
   const services = appointment.services.map((s) => s.name).join(" + ");
   const confirmed = appointment.status === "CONFIRMED" || appointment.status === "COMPLETED";
+  const policy = customerCancelPolicy(appointment, shop);
+  const cancelSection =
+    appointment.status === "CONFIRMED" || appointment.status === "PENDING_PAYMENT" ? (
+      policy.allowed ? (
+        <div className="flex flex-col items-center gap-1 text-center">
+          <ActionForm action={cancelByCustomer} confirm="Cancelar este agendamento? O horário fica livre para outra pessoa.">
+            <input type="hidden" name="token" value={appointment.publicToken} />
+            <SubmitButton variant="ghost" size="sm" pendingText="Cancelando...">
+              Cancelar agendamento
+            </SubmitButton>
+          </ActionForm>
+          <p className="text-xs text-muted">
+            Pode cancelar por aqui até {policy.until} antes.
+            {paid > 0 && ` O valor pago online (${formatMoney(paid)}) é devolvido por ${shop.name}.`}
+          </p>
+        </div>
+      ) : (
+        <p className="text-center text-xs text-muted">{policy.reason}</p>
+      )
+    ) : null;
 
   const summary = (
     <Card className="divide-y divide-line">
@@ -90,6 +113,7 @@ export default async function BookingStatusPage({ params, searchParams }: PagePr
             Pagar {formatMoney(pending.amountCents)}
           </a>
         )}
+        {cancelSection}
       </div>
     );
   }
@@ -147,6 +171,7 @@ export default async function BookingStatusPage({ params, searchParams }: PagePr
       <LinkButton href={`/agendar/${shop.slug}`} variant="ghost">
         Fazer outro agendamento
       </LinkButton>
+      {cancelSection}
     </div>
   );
 }

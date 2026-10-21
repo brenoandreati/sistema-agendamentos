@@ -23,6 +23,7 @@ export async function registerIncome(_: ActionState, form: FormData): Promise<Ac
   if (!amountCents || amountCents <= 0) return fail("Informe o valor recebido.");
   if (!(method in PAYMENT_METHOD)) return fail("Escolha a forma de pagamento.");
   if (!isDateStr(date)) return fail("Escolha a data.");
+  if (date > todayStr(shop.timezone)) return fail("A entrada não pode ter data no futuro.");
 
   const client = clientId ? await db.client.findFirst({ where: { id: clientId, shopId: shop.id } }) : null;
   // Entradas de outros dias ficam registradas ao meio-dia daquele dia.

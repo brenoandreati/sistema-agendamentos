@@ -1,13 +1,16 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { CopyButton } from "@/components/copy-button";
+import { PushToggle } from "@/components/push-toggle";
 import { ShopMark } from "@/components/shop-mark";
 import { NICHE_ORDER, NICHES } from "@/config/niches";
 import { ActionForm, SubmitButton } from "@/components/forms";
 import { Badge, Card, Checkbox, Field, Input, Select } from "@/components/ui";
 import { PageHeader } from "@/components/ui";
 import { requireUser } from "@/lib/auth";
+import { CANCEL_NOTICES, TIMEZONES } from "@/lib/defaults";
 import { formatPhone } from "@/lib/format";
+import { pushPublicKey } from "@/lib/notify";
 import { mercadoPagoToken } from "@/lib/payments";
 import { changePassword, saveAppearance, savePaymentSettings, saveScheduleRules, saveShopInfo } from "./actions";
 
@@ -62,7 +65,7 @@ export default async function SettingsPage() {
             </Field>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="WhatsApp">
-                <Input name="phone" type="tel" defaultValue={shop.phone ? formatPhone(shop.phone) : ""} />
+                <Input name="phone" type="tel" required defaultValue={shop.phone ? formatPhone(shop.phone) : ""} />
               </Field>
               <Field label="Instagram">
                 <Input name="instagram" defaultValue={shop.instagram ?? ""} placeholder="@seunegocio" />
@@ -128,7 +131,27 @@ export default async function SettingsPage() {
                 </Select>
               </Field>
               <Field label="Agendar com até (dias)" hint="Quantos dias à frente o cliente vê.">
-                <Input name="maxAdvanceDays" type="number" min={1} max={365} defaultValue={shop.maxAdvanceDays} />
+                <Input name="maxAdvanceDays" type="number" min={1} max={90} defaultValue={shop.maxAdvanceDays} />
+              </Field>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Cancelamento pelo cliente" hint="O cliente cancela pelo link do agendamento e você recebe um aviso.">
+                <Select name="cancelNoticeMin" defaultValue={shop.cancelNoticeMin ?? "off"}>
+                  {CANCEL_NOTICES.map((n) => (
+                    <option key={n.label} value={n.value ?? "off"}>
+                      {n.label}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <Field label="Fuso horário" hint="Troque antes de começar a receber agendamentos.">
+                <Select name="timezone" defaultValue={shop.timezone}>
+                  {TIMEZONES.map((t) => (
+                    <option key={t.value} value={t.value}>
+                      {t.label}
+                    </option>
+                  ))}
+                </Select>
               </Field>
             </div>
             <div>
@@ -140,9 +163,24 @@ export default async function SettingsPage() {
         <Section
           title="Pagamento online"
           description="O cliente paga por Pix ou cartão pelo Mercado Pago na hora de agendar. O dinheiro cai direto na sua conta do Mercado Pago."
-          badge={paymentsLive ? <Badge tone="success">Mercado Pago conectado</Badge> : <Badge tone="warning">Modo demonstração</Badge>}
+          badge={
+            shop.isDemo ? (
+              <Badge tone="warning">Simulado</Badge>
+            ) : paymentsLive ? (
+              <Badge tone="success">Mercado Pago conectado</Badge>
+            ) : (
+              <Badge tone="warning">Não conectado</Badge>
+            )
+          }
         >
           <ActionForm action={savePaymentSettings} className="flex flex-col gap-5">
+            {!shop.isDemo && !paymentsLive && (
+              <p className="rounded-control border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
+                {hasOwnToken
+                  ? "Não foi possível usar o token salvo. Cole o Access Token de novo. Até lá, os clientes pagam no local."
+                  : "Sem o Mercado Pago conectado, os clientes agendam sem pagar online e pagam no local."}
+              </p>
+            )}
             <fieldset className="flex flex-col gap-2">
               <legend className="mb-2 text-sm font-medium">Quanto o cliente paga ao agendar</legend>
               <Radio name="paymentMode" value="FULL" defaultChecked={shop.paymentMode === "FULL"} label="Valor total" hint="O horário só é confirmado depois do pagamento." />
@@ -168,8 +206,8 @@ export default async function SettingsPage() {
               hint={
                 <>
                   No Mercado Pago, vá em <b>Seu negócio → Configurações → Credenciais</b> (ou em mercadopago.com.br/developers →
-                  Suas integrações) e copie o <b>Access Token de produção</b>. Sem token, o sistema funciona em modo demonstração,
-                  sem cobrança de verdade.
+                  Suas integrações) e copie o <b>Access Token de produção</b>. Sem token, ninguém paga online: o cliente paga no
+                  local.
                 </>
               }
             >
@@ -187,13 +225,19 @@ export default async function SettingsPage() {
           </ActionForm>
         </Section>
 
+        {!shop.isDemo && (
+          <Section title="Avisos no celular" description="Ligue em cada aparelho onde você quer receber os avisos (celular, tablet ou computador).">
+            <PushToggle publicKey={pushPublicKey()} />
+          </Section>
+        )}
+
         <Section title="Sua senha">
           <ActionForm action={changePassword} className="grid gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
             <Field label="Senha atual">
               <Input name="current" type="password" autoComplete="current-password" required />
             </Field>
             <Field label="Nova senha">
-              <Input name="next" type="password" autoComplete="new-password" minLength={6} required />
+              <Input name="next" type="password" autoComplete="new-password" minLength={8} maxLength={200} required />
             </Field>
             <SubmitButton>Alterar senha</SubmitButton>
           </ActionForm>

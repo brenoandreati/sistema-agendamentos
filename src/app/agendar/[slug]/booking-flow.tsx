@@ -6,7 +6,7 @@ import type { PaymentMode } from "@prisma/client";
 import { Check, CircleUserRound, Users } from "lucide-react";
 import { CustomerAuthForms } from "@/components/customer-auth";
 import { Alert } from "@/components/forms";
-import { Button, Card, cn, Field, Input, Textarea } from "@/components/ui";
+import { Button, Card, Checkbox, cn, Field, Input, Textarea } from "@/components/ui";
 import { durationLabel, formatPhone } from "@/lib/format";
 import { formatMoney } from "@/lib/money";
 import { onlineAmountCents } from "@/lib/pricing";
@@ -61,6 +61,8 @@ export function BookingFlow({
   const [notes, setNotes] = useState("");
   const [customer, setCustomer] = useState(initialCustomer);
   const [mode, setMode] = useState<"guest" | "account">("guest");
+  // Guardar os dados no aparelho só se a pessoa pedir (tablet do salão é usado por várias pessoas).
+  const [remember, setRemember] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, startSubmit] = useTransition();
 
@@ -132,6 +134,7 @@ export function BookingFlow({
       if (saved?.name) setName(saved.name);
       if (saved?.phone) setPhone(saved.phone);
       if (saved?.email) setEmail(saved.email);
+      if (saved) setRemember(true);
     } catch {}
   }
 
@@ -155,7 +158,8 @@ export function BookingFlow({
         return;
       }
       try {
-        if (!customer) localStorage.setItem(SAVED_CONTACT, JSON.stringify({ name, phone, email }));
+        if (!customer && remember) localStorage.setItem(SAVED_CONTACT, JSON.stringify({ name, phone, email }));
+        else if (!customer) localStorage.removeItem(SAVED_CONTACT);
       } catch {}
       if (/^https?:\/\//.test(result.redirectTo)) window.location.assign(result.redirectTo);
       else router.push(result.redirectTo);
@@ -381,7 +385,7 @@ export function BookingFlow({
               ) : (
                 <>
                   <Field label="Seu nome">
-                    <Input value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" required />
+                    <Input value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" maxLength={80} required />
                   </Field>
                   <Field label="WhatsApp" hint="Para falarmos com você sobre o horário.">
                     <Input
@@ -395,8 +399,14 @@ export function BookingFlow({
                     />
                   </Field>
                   <Field label="E-mail (opcional)">
-                    <Input value={email} onChange={(e) => setEmail(e.target.value)} type="email" autoComplete="email" />
+                    <Input value={email} onChange={(e) => setEmail(e.target.value)} type="email" autoComplete="email" maxLength={254} />
                   </Field>
+                  <Checkbox
+                    label="Lembrar meus dados neste aparelho"
+                    hint="Deixe desmarcado se o aparelho for de outra pessoa."
+                    checked={remember}
+                    onChange={(e) => setRemember(e.target.checked)}
+                  />
                 </>
               )}
             </>

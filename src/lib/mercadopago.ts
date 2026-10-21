@@ -71,6 +71,7 @@ export type MercadoPagoPayment = {
   payment_type_id: string;
   payment_method_id: string;
   transaction_amount: number;
+  transaction_amount_refunded?: number;
   date_approved: string | null;
 };
 

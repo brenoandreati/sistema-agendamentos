@@ -10,7 +10,7 @@ const OWNER_COOKIE = "session";
 const CUSTOMER_COOKIE = "cliente";
 const MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
 
-type Session = { userId: string; shopId: string };
+type Session = { userId: string; shopId: string; version: number };
 
 function secretKey() {
   const secret = process.env.AUTH_SECRET;
@@ -46,8 +46,8 @@ async function readToken(cookie: string): Promise<JWTPayload | null> {
   }
 }
 
-export async function createSession(session: Session) {
-  await writeToken(OWNER_COOKIE, { ...session, kind: "owner" });
+export async function createSession(user: { id: string; shopId: string; sessionVersion: number }) {
+  await writeToken(OWNER_COOKIE, { userId: user.id, shopId: user.shopId, v: user.sessionVersion, kind: "owner" });
 }
 
 export async function destroySession() {
@@ -57,23 +57,33 @@ export async function destroySession() {
 export const getSession = cache(async (): Promise<Session | null> => {
   const payload = await readToken(OWNER_COOKIE);
   if (payload?.kind !== "owner" || typeof payload.userId !== "string" || typeof payload.shopId !== "string") return null;
-  return { userId: payload.userId, shopId: payload.shopId };
+  return { userId: payload.userId, shopId: payload.shopId, version: typeof payload.v === "number" ? payload.v : 0 };
 });
 
-/** Usuário logado com o negócio dele. Redireciona para o login se não houver sessão. */
-export const requireUser = cache(async () => {
+/**
+ * Usuário logado com o negócio dele, ou null. Confere no banco: se a senha mudou depois
+ * do login (sessionVersion), o login antigo não vale mais.
+ */
+export const getCurrentUser = cache(async () => {
   const session = await getSession();
-  if (!session) redirect("/entrar");
+  if (!session) return null;
   const user = await db.user.findUnique({
     where: { id: session.userId },
     include: { shop: true },
   });
-  if (!user || user.shopId !== session.shopId) redirect("/entrar");
+  if (!user || user.shopId !== session.shopId || user.sessionVersion !== session.version) return null;
   return user;
 });
 
-export async function createCustomerSession(customerId: string) {
-  await writeToken(CUSTOMER_COOKIE, { customerId, kind: "customer" });
+/** Usuário logado com o negócio dele. Redireciona para o login se não houver sessão. */
+export const requireUser = cache(async () => {
+  const user = await getCurrentUser();
+  if (!user) redirect("/entrar");
+  return user;
+});
+
+export async function createCustomerSession(customer: { id: string; sessionVersion: number }) {
+  await writeToken(CUSTOMER_COOKIE, { customerId: customer.id, v: customer.sessionVersion, kind: "customer" });
 }
 
 export async function destroyCustomerSession() {
@@ -84,8 +94,11 @@ export async function destroyCustomerSession() {
 export const getCustomer = cache(async () => {
   const payload = await readToken(CUSTOMER_COOKIE);
   if (payload?.kind !== "customer" || typeof payload.customerId !== "string") return null;
-  return db.customer.findUnique({
+  const customer = await db.customer.findUnique({
     where: { id: payload.customerId },
-    select: { id: true, name: true, email: true, phone: true },
+    select: { id: true, name: true, email: true, phone: true, sessionVersion: true },
   });
+  const version = typeof payload.v === "number" ? payload.v : 0;
+  if (!customer || customer.sessionVersion !== version) return null;
+  return { id: customer.id, name: customer.name, email: customer.email, phone: customer.phone };
 });

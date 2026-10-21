@@ -73,6 +73,8 @@ model Shop {
   address         String?
   instagram       String?
   logoUrl         String?
+  /// Muda quando a logo muda (a logo é servida em /api/logo/<id>?v=...). Vazio = sem logo.
+  logoUpdatedAt   DateTime?
   primaryColor    String      @default("#b45309")
   timezone        String      @default("America/Sao_Paulo")
   slotIntervalMin Int         @default(30)
@@ -81,6 +83,8 @@ model Shop {
   paymentMode     PaymentMode @default(FULL)
   depositPercent  Int         @default(30)
   paymentHoldMin  Int         @default(20)
+  /// Até quantos minutos antes o cliente pode cancelar pelo site. Vazio = só falando com o negócio.
+  cancelNoticeMin Int?        @default(120)
   /// Token do Mercado Pago criptografado com AUTH_SECRET.
   mpAccessToken   String?
   /// Negócio de demonstração (/demonstracao): dados fictícios e configurações travadas.
@@ -100,14 +104,45 @@ model Shop {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  shopId       String
-  shop         Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  name         String
-  email        String   @unique
-  passwordHash String
-  role         Role     @default(OWNER)
-  createdAt    DateTime @default(now())
+  id             String   @id @default(cuid())
+  shopId         String
+  shop           Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  name           String
+  email          String   @unique
+  passwordHash   String
+  role           Role     @default(OWNER)
+  /// Muda quando a senha muda: derruba os logins abertos em outros aparelhos.
+  sessionVersion Int      @default(0)
+  createdAt      DateTime @default(now())
+
+  pushSubscriptions PushSubscription[]
+  passwordResets    PasswordReset[]
+}
+
+/// Aparelho do dono que recebe avisos de agendamento novo (notificação do navegador/celular).
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+/// Link de uso único para criar uma senha nova. Guarda só o hash do código.
+model PasswordReset {
+  id         String    @id @default(cuid())
+  tokenHash  String    @unique
+  userId     String?
+  user       User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  customerId String?
+  customer   Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  expiresAt  DateTime
+  usedAt     DateTime?
+  createdAt  DateTime  @default(now())
 }
 
 model Professional {
@@ -193,14 +228,24 @@ model Client {
 
 /// Conta opcional de quem agenda. Vale para qualquer negócio da plataforma.
 model Customer {
-  id           String   @id @default(cuid())
-  name         String
-  email        String   @unique
-  phone        String
-  passwordHash String
-  createdAt    DateTime @default(now())
+  id             String   @id @default(cuid())
+  name           String
+  email          String   @unique
+  phone          String
+  passwordHash   String
+  /// Muda quando a senha muda: derruba os logins abertos em outros aparelhos.
+  sessionVersion Int      @default(0)
+  createdAt      DateTime @default(now())
 
-  appointments Appointment[]
+  appointments   Appointment[]
+  passwordResets PasswordReset[]
+}
+
+/// Contador de tentativas (login, cadastro, agendamento) para frear abusos.
+model RateLimit {
+  key         String   @id
+  windowStart DateTime
+  count       Int
 }
 
 model Appointment {

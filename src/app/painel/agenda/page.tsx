@@ -119,6 +119,12 @@ export default async function AgendaPage({ searchParams }: PageProps<"/painel/ag
           </>
         }
       />
+      {Number(query.aviso) > 0 && (
+        <p className="mb-4 rounded-control border border-amber-500/40 bg-amber-500/10 p-3 text-sm" role="status">
+          Horário bloqueado. {Number(query.aviso)} agendamento(s) que já estavam marcados nesse período continuam na agenda:
+          remarque ou cancele se precisar.
+        </p>
+      )}
       <div className="grid items-start gap-4 lg:grid-cols-[18rem_minmax(0,1fr)]">
         <Card className="p-4 lg:sticky lg:top-6">
           <MonthCalendar

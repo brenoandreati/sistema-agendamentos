@@ -7,8 +7,8 @@ import { formatTime } from "@/lib/time";
 import { approveDemoPayment } from "../../actions";
 
 /**
- * Tela de pagamento do modo demonstração, usada quando o negócio ainda não conectou o Mercado Pago.
- * Com o Mercado Pago conectado, o cliente vai direto para o checkout do Mercado Pago.
+ * Tela de pagamento simulado, só para os negócios da demonstração.
+ * Nos negócios reais o cliente vai direto para o checkout do Mercado Pago.
  */
 export default async function DemoPaymentPage({ params, searchParams }: PageProps<"/agendar/[slug]/pagamento/[paymentId]">) {
   const { slug, paymentId } = await params;
@@ -18,7 +18,14 @@ export default async function DemoPaymentPage({ params, searchParams }: PageProp
     include: { shop: true, appointment: true },
   });
   const appointment = payment?.appointment;
-  if (!payment || !appointment || payment.shop.slug !== slug || payment.provider !== "demo" || appointment.publicToken !== t) {
+  if (
+    !payment ||
+    !appointment ||
+    !payment.shop.isDemo ||
+    payment.shop.slug !== slug ||
+    payment.provider !== "demo" ||
+    appointment.publicToken !== t
+  ) {
     notFound();
   }
   const expiresAt = appointment.holdExpiresAt;
@@ -26,8 +33,7 @@ export default async function DemoPaymentPage({ params, searchParams }: PageProp
   return (
     <div className="flex flex-col gap-4">
       <div className="rounded-control border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-800 dark:text-amber-200">
-        <b>Modo demonstração.</b> {payment.shop.name} ainda não conectou o Mercado Pago, então nenhum valor será cobrado. Escolha uma
-        opção para simular o pagamento.
+        <b>Demonstração.</b> Nenhum valor será cobrado. Escolha uma opção para simular o pagamento.
       </div>
       <Card className="p-5">
         <p className="text-sm text-muted">Valor a pagar</p>

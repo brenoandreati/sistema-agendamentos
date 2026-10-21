@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getCustomer } from "@/lib/auth";
 import { getBookingCatalog } from "@/lib/booking";
+import { chargesOnline } from "@/lib/payments";
 import { addDays, todayStr, weekdayOf } from "@/lib/time";
 import { BookingFlow } from "./booking-flow";
 
@@ -19,7 +20,7 @@ export default async function BookingPage({ params }: PageProps<"/agendar/[slug]
   );
 
   const today = todayStr(shop.timezone);
-  const days = Array.from({ length: Math.min(shop.maxAdvanceDays, 60) + 1 }, (_, i) => {
+  const days = Array.from({ length: Math.min(shop.maxAdvanceDays, 90) + 1 }, (_, i) => {
     const date = addDays(today, i);
     return {
       date,
@@ -34,7 +35,12 @@ export default async function BookingPage({ params }: PageProps<"/agendar/[slug]
     <BookingFlow
       slug={shop.slug}
       customer={customer ? { name: customer.name, email: customer.email, phone: customer.phone } : null}
-      payment={{ paymentMode: shop.paymentMode, depositPercent: shop.depositPercent, holdMin: shop.paymentHoldMin }}
+      payment={{
+        // Sem Mercado Pago conectado, o cliente paga no local.
+        paymentMode: (await chargesOnline(shop)) ? shop.paymentMode : "NONE",
+        depositPercent: shop.depositPercent,
+        holdMin: shop.paymentHoldMin,
+      }}
       services={services.map((s) => ({
         id: s.id,
         name: s.name,

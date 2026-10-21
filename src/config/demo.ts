@@ -178,6 +178,8 @@ export const DEMO_SHOPS: Record<Niche, DemoConfig> = {
   },
 };
 
+export const DEMO_LOCKED = "Na demonstração essa parte não pode ser alterada.";
+
 const DEMO_SLUGS = new Set(Object.values(DEMO_SHOPS).map((d) => d.slug));
 
 /** Endereços dos negócios de demonstração não podem ser usados por contas reais. */

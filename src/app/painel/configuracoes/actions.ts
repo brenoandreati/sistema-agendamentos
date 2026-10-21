@@ -3,25 +3,27 @@
 import { revalidatePath } from "next/cache";
 import type { Niche } from "@prisma/client";
 import { db } from "@/lib/db";
-import { isReservedSlug } from "@/config/demo";
+import { DEMO_LOCKED, isReservedSlug } from "@/config/demo";
 import { NICHE_ORDER } from "@/config/niches";
-import { requireUser } from "@/lib/auth";
+import { createSession, requireUser } from "@/lib/auth";
+import { CANCEL_NOTICES, TIMEZONES } from "@/lib/defaults";
+import { withinLimit, TOO_MANY } from "@/lib/rate-limit";
 import { encryptSecret } from "@/lib/crypto";
 import { hashPassword, verifyPassword } from "@/lib/password";
-import { fail, int, optionalText, text, type ActionState } from "@/lib/action";
+import { fail, int, MIN_PASSWORD, optionalText, text, type ActionState } from "@/lib/action";
 import { isHexColor, onlyDigits, slugify } from "@/lib/format";
 import { getAccount, MercadoPagoError } from "@/lib/mercadopago";
 
 const saved: ActionState = { ok: true, message: "Alterações salvas." };
-const DEMO_LOCKED = "Na demonstração essa configuração não pode ser alterada.";
 
 export async function saveShopInfo(_: ActionState, form: FormData): Promise<ActionState> {
   const { shopId, shop } = await requireUser();
   if (shop.isDemo) return fail(DEMO_LOCKED);
-  const name = text(form, "name");
-  const slug = slugify(text(form, "slug"));
-  const phone = optionalText(form, "phone");
+  const name = text(form, "name", 80);
+  const slug = slugify(text(form, "slug", 60));
+  const phone = onlyDigits(text(form, "phone", 30));
   if (!name) return fail("Informe o nome do seu negócio.");
+  if (phone.length < 10 || phone.length > 13) return fail("Informe o WhatsApp do negócio com DDD. Os clientes usam para falar com você.");
   if (slug.length < 3) return fail("O endereço do link precisa ter pelo menos 3 letras ou números.");
   if (isReservedSlug(slug)) return fail("Esse endereço de link já está em uso. Escolha outro.");
   const taken = await db.shop.findUnique({ where: { slug }, select: { id: true } });
@@ -32,9 +34,9 @@ export async function saveShopInfo(_: ActionState, form: FormData): Promise<Acti
     data: {
       name,
       slug,
-      phone: phone ? onlyDigits(phone) : null,
-      address: optionalText(form, "address"),
-      instagram: optionalText(form, "instagram")?.replace(/^@/, "") ?? null,
+      phone,
+      address: optionalText(form, "address", 200),
+      instagram: optionalText(form, "instagram", 60)?.replace(/^@/, "") ?? null,
     },
   });
   revalidatePath("/", "layout");
@@ -74,10 +76,18 @@ export async function saveScheduleRules(_: ActionState, form: FormData): Promise
   const slotIntervalMin = int(form, "slotIntervalMin");
   const minNoticeMin = int(form, "minNoticeMin");
   const maxAdvanceDays = int(form, "maxAdvanceDays");
+  const cancel = text(form, "cancelNoticeMin");
+  const cancelNoticeMin = cancel === "off" ? null : Number(cancel);
+  const timezone = text(form, "timezone");
   if (!slotIntervalMin || slotIntervalMin < 5 || slotIntervalMin > 120) return fail("Intervalo da agenda inválido.");
   if (minNoticeMin === null || minNoticeMin < 0) return fail("Antecedência mínima inválida.");
-  if (!maxAdvanceDays || maxAdvanceDays < 1 || maxAdvanceDays > 365) return fail("O limite de dias deve ficar entre 1 e 365.");
-  await db.shop.update({ where: { id: shopId }, data: { slotIntervalMin, minNoticeMin, maxAdvanceDays } });
+  if (!maxAdvanceDays || maxAdvanceDays < 1 || maxAdvanceDays > 90) return fail("O limite de dias deve ficar entre 1 e 90.");
+  if (!CANCEL_NOTICES.some((n) => n.value === cancelNoticeMin)) return fail("Escolha até quando o cliente pode cancelar.");
+  if (!TIMEZONES.some((t) => t.value === timezone)) return fail("Escolha o fuso horário.");
+  await db.shop.update({
+    where: { id: shopId },
+    data: { slotIntervalMin, minNoticeMin, maxAdvanceDays, cancelNoticeMin, timezone },
+  });
   revalidatePath("/painel/configuracoes");
   return saved;
 }
@@ -127,10 +137,16 @@ export async function savePaymentSettings(_: ActionState, form: FormData): Promi
 export async function changePassword(_: ActionState, form: FormData): Promise<ActionState> {
   const user = await requireUser();
   if (user.shop.isDemo) return fail(DEMO_LOCKED);
-  const current = text(form, "current");
-  const next = text(form, "next");
+  const current = text(form, "current", 200);
+  const next = text(form, "next", 200);
+  if (!(await withinLimit(`password:user:${user.id}`, 10, 900))) return fail(TOO_MANY);
   if (!(await verifyPassword(current, user.passwordHash))) return fail("A senha atual está incorreta.");
-  if (next.length < 6) return fail("A nova senha precisa ter pelo menos 6 caracteres.");
-  await db.user.update({ where: { id: user.id }, data: { passwordHash: await hashPassword(next) } });
-  return { ok: true, message: "Senha alterada." };
+  if (next.length < MIN_PASSWORD) return fail(`A nova senha precisa ter pelo menos ${MIN_PASSWORD} caracteres.`);
+  // Trocar a senha desconecta os outros aparelhos; este continua logado.
+  const updated = await db.user.update({
+    where: { id: user.id },
+    data: { passwordHash: await hashPassword(next), sessionVersion: { increment: 1 } },
+  });
+  await createSession(updated);
+  return { ok: true, message: "Senha alterada. Os outros aparelhos foram desconectados." };
 }

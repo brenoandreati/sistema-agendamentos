@@ -1,4 +1,5 @@
 // Cálculo puro de horários livres. Tudo em minutos desde 00:00 do dia local.
+import { minutesOfDay, todayStr } from "./time";
 
 export type Interval = { start: number; end: number };
 
@@ -14,6 +15,18 @@ type SlotOptions = {
   /** Nenhum horário antes disso (usado para "hoje" + antecedência mínima). */
   earliestStart?: number;
 };
+
+/**
+ * Primeiro horário permitido no dia, respeitando a antecedência mínima a partir de agora.
+ * `null` = o dia inteiro já passou do limite; `undefined` = sem limite nesse dia.
+ */
+export function earliestStartOn(dateStr: string, now: Date, noticeMin: number, timezone: string): number | null | undefined {
+  const earliest = new Date(now.getTime() + noticeMin * 60_000);
+  const earliestDay = todayStr(timezone, earliest);
+  if (dateStr < earliestDay) return null;
+  if (dateStr > earliestDay) return undefined;
+  return minutesOfDay(earliest, timezone);
+}
 
 export function overlaps(a: Interval, b: Interval): boolean {
   return a.start < b.end && b.start < a.end;

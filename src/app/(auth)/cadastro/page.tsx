@@ -3,16 +3,17 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { ActionForm, SubmitButton } from "@/components/forms";
 import { NicheChoice } from "@/components/niche-choice";
+import { TermsCheckbox } from "@/components/customer-auth";
 import { Card, Field, Input } from "@/components/ui";
 import { NICHES, nicheFromSlug } from "@/config/niches";
-import { getSession } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth";
 import { brandStyle } from "@/lib/format";
 import { signUp } from "../actions";
 
 export const metadata: Metadata = { title: "Criar conta" };
 
 export default async function SignUpPage({ searchParams }: PageProps<"/cadastro">) {
-  if (await getSession()) redirect("/painel");
+  if (await getCurrentUser()) redirect("/painel");
   const niche = nicheFromSlug((await searchParams).tipo);
 
   if (!niche) {
@@ -50,20 +51,21 @@ export default async function SignUpPage({ searchParams }: PageProps<"/cadastro"
         <ActionForm action={signUp} className="flex flex-col gap-4">
           <input type="hidden" name="tipo" value={config.slug} />
           <Field label="Nome do seu negócio">
-            <Input name="shopName" required placeholder={config.namePlaceholder} />
+            <Input name="shopName" required maxLength={80} placeholder={config.namePlaceholder} />
           </Field>
           <Field label="Seu nome">
-            <Input name="name" autoComplete="name" required />
+            <Input name="name" autoComplete="name" required maxLength={80} />
           </Field>
-          <Field label="WhatsApp" hint="Aparece para os clientes na página de agendamento.">
-            <Input name="phone" type="tel" inputMode="tel" placeholder="(11) 98765-4321" />
+          <Field label="WhatsApp do negócio" hint="Aparece para os clientes na página de agendamento.">
+            <Input name="phone" type="tel" inputMode="tel" placeholder="(11) 98765-4321" required />
           </Field>
           <Field label="E-mail">
-            <Input name="email" type="email" autoComplete="email" required />
+            <Input name="email" type="email" autoComplete="email" required maxLength={254} />
           </Field>
-          <Field label="Senha" hint="Mínimo de 6 caracteres.">
-            <Input name="password" type="password" autoComplete="new-password" minLength={6} required />
+          <Field label="Senha" hint="Mínimo de 8 caracteres.">
+            <Input name="password" type="password" autoComplete="new-password" minLength={8} maxLength={200} required />
           </Field>
+          <TermsCheckbox />
           <SubmitButton pendingText="Criando...">Criar conta</SubmitButton>
         </ActionForm>
       </Card>

@@ -4,11 +4,13 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
+import { DEMO_LOCKED } from "@/config/demo";
 import { fail, int, optionalText, text, type ActionState } from "@/lib/action";
 import { parseMoney } from "@/lib/money";
 
 export async function saveService(_: ActionState, form: FormData): Promise<ActionState> {
-  const { shopId } = await requireUser();
+  const { shopId, shop } = await requireUser();
+  if (shop.isDemo) return fail(DEMO_LOCKED);
   const id = text(form, "id");
   const name = text(form, "name");
   const durationMin = int(form, "durationMin");
@@ -46,7 +48,8 @@ export async function saveService(_: ActionState, form: FormData): Promise<Actio
 }
 
 export async function deleteService(_: ActionState, form: FormData): Promise<ActionState> {
-  const { shopId } = await requireUser();
+  const { shopId, shop } = await requireUser();
+  if (shop.isDemo) return fail(DEMO_LOCKED);
   const id = text(form, "id");
   const service = await db.service.findFirst({ where: { id, shopId }, include: { _count: { select: { appointments: true } } } });
   if (!service) return fail("Serviço não encontrado.");

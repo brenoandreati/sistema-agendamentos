@@ -89,7 +89,11 @@ export default async function FinancePage({ searchParams }: PageProps<"/painel/f
         <Stat
           label="Recebido"
           value={formatMoney(report.received)}
-          hint={change ? `${change} em relação ${range.previousLabel}` : `Online ${formatMoney(report.online)}`}
+          hint={
+            change
+              ? `${change} em relação ${range.previousLabel}${report.partialComparison ? " até este ponto" : ""}`
+              : `Online ${formatMoney(report.online)}`
+          }
         />
         <Stat label="A receber" value={formatMoney(report.toReceive)} hint={`${report.unpaid.length} atendimento(s) já realizado(s) sem pagamento completo`} />
         <Stat

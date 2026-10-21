@@ -57,7 +57,7 @@ export default async function PublicShopLayout({ children, params }: LayoutProps
       </header>
       {shop.isDemo && (
         <p className="border-b border-brand/25 bg-brand/8 px-4 py-2 text-center text-sm">
-          <b>Demonstração</b> · o pagamento é simulado, ninguém é cobrado.{" "}
+          <b>Demonstração</b> · o pagamento é simulado. Use dados de teste: o WhatsApp e o e-mail não são guardados.{" "}
           <Link href="/demonstracao" className="text-brand underline">
             Outras áreas
           </Link>

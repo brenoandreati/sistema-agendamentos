@@ -6,7 +6,14 @@ import { hashPassword } from "../src/lib/password";
 import { defaultWorkingHours } from "../src/lib/defaults";
 import { addDays, todayStr, weekdayOf, zonedToUtc } from "../src/lib/time";
 
-const db = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }) });
+// O exemplo tem senha conhecida: nunca rode no banco de produção.
+const url = process.env.DATABASE_URL ?? "";
+if (!/localhost|127\.0\.0\.1/.test(url) && process.env.ALLOW_SEED !== "1") {
+  console.error("O seed só roda em banco local (localhost). Para forçar, use ALLOW_SEED=1.");
+  process.exit(1);
+}
+
+const db = new PrismaClient({ adapter: new PrismaPg({ connectionString: url }) });
 const TZ = "America/Sao_Paulo";
 const SLUG = "exemplo";
 

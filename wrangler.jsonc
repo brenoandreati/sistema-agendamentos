@@ -15,7 +15,6 @@
   //   DATABASE_URL     endereço do banco PostgreSQL (ex.: Neon)
   //   AUTH_SECRET      chave secreta aleatória (openssl rand -hex 32)
   //   APP_URL          endereço público do sistema, ex.: https://arvan-agendamentos.SEU-USUARIO.workers.dev
-  //   MP_ACCESS_TOKEN  opcional: token padrão do Mercado Pago
   //
   // Opcional, para o banco responder mais rápido: crie um Hyperdrive apontando para o banco e adicione
   //   "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "<id do hyperdrive>" }]

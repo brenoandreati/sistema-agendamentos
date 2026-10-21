@@ -12,6 +12,10 @@ export async function getFinanceReport(shop: Shop, period: Period, date: string)
   const from = zonedToUtc(range.start, 0, tz);
   const to = zonedToUtc(range.end, 0, tz);
   const previousFrom = zonedToUtc(periodRange(period, range.prev).start, 0, tz);
+  // Com o período ainda em andamento (ex.: dia 10 do mês), compara com o mesmo trecho do anterior (dias 1 a 10).
+  const nowMs = Date.now();
+  const elapsed = nowMs > from.getTime() && nowMs < to.getTime() ? nowMs - from.getTime() : null;
+  const previousTo = elapsed === null ? from : new Date(Math.min(from.getTime(), previousFrom.getTime() + elapsed));
 
   const [payments, previous, appointments] = await Promise.all([
     db.payment.findMany({
@@ -20,7 +24,7 @@ export async function getFinanceReport(shop: Shop, period: Period, date: string)
       orderBy: { paidAt: "desc" },
     }),
     db.payment.aggregate({
-      where: { shopId: shop.id, status: "APPROVED", paidAt: { gte: previousFrom, lt: from } },
+      where: { shopId: shop.id, status: "APPROVED", paidAt: { gte: previousFrom, lt: previousTo } },
       _sum: { amountCents: true },
     }),
     db.appointment.findMany({
@@ -59,6 +63,8 @@ export async function getFinanceReport(shop: Shop, period: Period, date: string)
     range,
     received,
     previousReceived: previous._sum.amountCents ?? 0,
+    /** A comparação usa só o trecho já decorrido do período anterior. */
+    partialComparison: elapsed !== null,
     online,
     inPerson: received - online,
     byMethod: [...byMethod.entries()].sort((a, b) => b[1] - a[1]),

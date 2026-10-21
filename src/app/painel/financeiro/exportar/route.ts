@@ -1,6 +1,6 @@
 import { type NextRequest } from "next/server";
 import { db } from "@/lib/db";
-import { getSession } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth";
 import { PAYMENT_METHOD } from "@/lib/format";
 import { isPeriod, periodRange } from "@/lib/period";
 import { formatDateNumeric, formatTime, isDateStr, todayStr, toDateStr, zonedToUtc } from "@/lib/time";
@@ -13,10 +13,9 @@ function csvCell(value: string) {
 
 /** Planilha (CSV, separada por ponto e vírgula para abrir direto no Excel em português) com os pagamentos do período. */
 export async function GET(request: NextRequest) {
-  const session = await getSession();
-  if (!session) return new Response("Não autorizado", { status: 401 });
-  const shop = await db.shop.findUnique({ where: { id: session.shopId } });
-  if (!shop) return new Response("Não autorizado", { status: 401 });
+  const user = await getCurrentUser();
+  if (!user) return new Response("Não autorizado", { status: 401 });
+  const { shop } = user;
 
   const params = request.nextUrl.searchParams;
   const period = isPeriod(params.get("periodo")) ? (params.get("periodo") as "dia") : "mes";

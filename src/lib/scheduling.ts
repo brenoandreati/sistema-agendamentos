@@ -1,7 +1,7 @@
 import "server-only";
 import type { Prisma, Shop } from "@prisma/client";
 import { db } from "./db";
-import { computeSlots, type Interval } from "./availability";
+import { computeSlots, earliestStartOn, type Interval } from "./availability";
 import { dayRange, diffDays, minutesOfDay, todayStr, weekdayOf } from "./time";
 
 type Tx = Prisma.TransactionClient;
@@ -64,6 +64,9 @@ export async function getDayAvailability(opts: AvailabilityOptions): Promise<Rec
   const offset = diffDays(todayStr(shop.timezone, now), dateStr);
   if (offset < 0) return result;
   if (opts.publicBooking && offset > shop.maxAdvanceDays) return result;
+  // A antecedência mínima vale a partir de agora, mesmo que caia no dia seguinte.
+  const earliestStart = earliestStartOn(dateStr, now, opts.publicBooking ? shop.minNoticeMin : 0, shop.timezone);
+  if (earliestStart === null) return result;
 
   const day = dayRange(dateStr, shop.timezone);
   const [hours, appointments, blocks] = await Promise.all([
@@ -85,9 +88,6 @@ export async function getDayAvailability(opts: AvailabilityOptions): Promise<Rec
       select: { professionalId: true, startAt: true, endAt: true },
     }),
   ]);
-
-  const earliestStart =
-    offset === 0 ? minutesOfDay(now, shop.timezone) + (opts.publicBooking ? shop.minNoticeMin : 0) : undefined;
 
   for (const id of professionalIds) {
     const working = hours

@@ -190,17 +190,29 @@ export async function createBlock(_: ActionState, form: FormData): Promise<Actio
   const professionals = await db.professional.findMany({ where: { shopId: shop.id, id: { in: professionalIds } } });
   if (!professionals.length) return fail("Escolha pelo menos um profissional.");
 
+  const startAt = zonedToUtc(date, start, shop.timezone);
+  const endAt = zonedToUtc(date, end, shop.timezone);
   await db.timeBlock.createMany({
     data: professionals.map((p) => ({
       shopId: shop.id,
       professionalId: p.id,
-      startAt: zonedToUtc(date, start, shop.timezone),
-      endAt: zonedToUtc(date, end, shop.timezone),
+      startAt,
+      endAt,
       reason: text(form, "reason") || null,
     })),
   });
+  // Quem já estava marcado nesse horário continua na agenda: avisa para o negócio remarcar se precisar.
+  const overlapping = await db.appointment.count({
+    where: {
+      shopId: shop.id,
+      professionalId: { in: professionals.map((p) => p.id) },
+      startAt: { lt: endAt },
+      endAt: { gt: startAt },
+      status: { in: ["CONFIRMED", "PENDING_PAYMENT"] },
+    },
+  });
   revalidatePath("/painel", "layout");
-  redirect(`/painel/agenda?data=${date}`);
+  redirect(`/painel/agenda?data=${date}${overlapping ? `&aviso=${overlapping}` : ""}`);
 }
 
 export async function deleteBlock(_: ActionState, form: FormData): Promise<ActionState> {

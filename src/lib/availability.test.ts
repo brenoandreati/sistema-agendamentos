@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { computeSlots } from "./availability";
+import { computeSlots, earliestStartOn } from "./availability";
 
 const day = [{ start: 9 * 60, end: 12 * 60 }];
 
@@ -55,4 +55,17 @@ test("considera mais de um período no dia (almoço)", () => {
 
 test("sem expediente não há horários", () => {
   assert.deepEqual(computeSlots({ working: [], busy: [], duration: 30, step: 30 }), []);
+});
+
+test("antecedência mínima vale também para os próximos dias", () => {
+  const SP = "America/Sao_Paulo";
+  const noite = new Date("2026-10-20T23:00:00.000Z"); // 20h em São Paulo
+  // 1 dia de antecedência: amanhã só a partir das 20h, depois de amanhã livre.
+  assert.equal(earliestStartOn("2026-10-20", noite, 1440, SP), null);
+  assert.equal(earliestStartOn("2026-10-21", noite, 1440, SP), 20 * 60);
+  assert.equal(earliestStartOn("2026-10-22", noite, 1440, SP), undefined);
+  // 12 horas às 22h: amanhã a partir das 10h.
+  assert.equal(earliestStartOn("2026-10-21", new Date("2026-10-21T01:00:00.000Z"), 720, SP), 10 * 60);
+  // Sem antecedência: hoje a partir de agora.
+  assert.equal(earliestStartOn("2026-10-20", noite, 0, SP), 20 * 60);
 });

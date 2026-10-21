@@ -3,13 +3,13 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { ActionForm, SubmitButton } from "@/components/forms";
 import { Card, Field, Input } from "@/components/ui";
-import { getSession } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth";
 import { signIn } from "../actions";
 
 export const metadata: Metadata = { title: "Entrar" };
 
 export default async function SignInPage() {
-  if (await getSession()) redirect("/painel");
+  if (await getCurrentUser()) redirect("/painel");
   return (
     <Card className="p-6">
       <h1 className="text-lg font-semibold">Entrar</h1>
@@ -23,6 +23,11 @@ export default async function SignInPage() {
         </Field>
         <SubmitButton pendingText="Entrando...">Entrar</SubmitButton>
       </ActionForm>
+      <p className="mt-4 text-center text-sm">
+        <Link href="/esqueci-senha" className="text-muted hover:text-fg hover:underline">
+          Esqueci minha senha
+        </Link>
+      </p>
       <p className="mt-5 text-center text-sm text-muted">
         Ainda não tem conta?{" "}
         <Link href="/cadastro" className="font-medium text-brand hover:underline">

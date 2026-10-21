@@ -93,3 +93,8 @@ export function durationLabel(minutes: number): string {
   if (!h) return `${m} min`;
   return m ? `${h}h${String(m).padStart(2, "0")}` : `${h}h`;
 }
+
+/** Acrescenta uma linha às observações. */
+export function addNote(notes: string | null, note: string) {
+  return [notes, note].filter(Boolean).join("\n");
+}
