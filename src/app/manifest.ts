@@ -8,8 +8,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: BRAND.tagline,
     start_url: "/painel",
     display: "standalone",
-    background_color: "#f5f5f3",
-    theme_color: "#b45309",
+    background_color: "#02081a",
+    theme_color: "#02081a",
     lang: "pt-BR",
     icons: [
       { src: "/icon.svg", sizes: "any", type: "image/svg+xml" },

@@ -1,5 +1,15 @@
 @import "tailwindcss";
 
+/* "dark:" vale no modo escuro do aparelho e nas páginas da plataforma, que são sempre escuras. */
+@custom-variant dark {
+  @media (prefers-color-scheme: dark) {
+    @slot;
+  }
+  &:where(.theme-arvan, .theme-arvan *) {
+    @slot;
+  }
+}
+
 :root {
   --bg: #f5f5f3;
   --surface: #ffffff;
@@ -7,7 +17,7 @@
   --line: #e2e2dd;
   --fg: #18181b;
   --muted: #66666d;
-  --brand: #b45309;
+  --brand: #0038f5;
   --brand-fg: #ffffff;
   color-scheme: light;
 }
@@ -141,6 +151,31 @@
 body {
   background: var(--bg);
   color: var(--fg);
+}
+
+/*
+ * Páginas da própria Arvan (início, entrar, cadastro, demonstração e conta do cliente):
+ * o azul-marinho e o azul da logo, sempre no escuro.
+ */
+.theme-arvan {
+  --bg: #02081a;
+  --surface: #071129;
+  --surface-2: #0d1938;
+  --line: #19274d;
+  --fg: #f1f2f6;
+  --muted: #8f9abd;
+  --brand: #3366ff;
+  --brand-fg: #ffffff;
+  color-scheme: dark;
+  background: var(--bg);
+  color: var(--fg);
+}
+body:has(.theme-arvan) {
+  background: #02081a;
+}
+.theme-arvan input[type="date"]::-webkit-calendar-picker-indicator,
+.theme-arvan input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
 }
 
 /* Campos de data e hora com a cor do tema no modo escuro */

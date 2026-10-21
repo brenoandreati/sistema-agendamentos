@@ -1,6 +1,6 @@
 import type { Niche } from "@prisma/client";
-import { CalendarCheck } from "lucide-react";
 import { NICHES } from "@/config/niches";
+import { ArvanLogo } from "./brand-logo";
 import { cn } from "./ui";
 
 const SIZES = {
@@ -31,11 +31,7 @@ export function ShopMark({
   );
 }
 
-/** Marca da plataforma (fora do painel de um negócio). */
+/** Logo da plataforma (fora do painel de um negócio). */
 export function AppMark({ className }: { className?: string }) {
-  return (
-    <span className={cn("grid size-8 place-items-center rounded-control bg-brand text-brand-fg", className)}>
-      <CalendarCheck className="size-4" aria-hidden />
-    </span>
-  );
+  return <ArvanLogo className={className} />;
 }

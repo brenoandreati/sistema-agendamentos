@@ -1,11 +1,14 @@
 import type { ReactNode } from "react";
+import type { Viewport } from "next";
 import Link from "next/link";
 import { AppMark } from "@/components/shop-mark";
 import { BRAND } from "@/config/brand";
 
+export const viewport: Viewport = { themeColor: "#02081a" };
+
 export default function CustomerLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="flex flex-1 flex-col">
+    <div className="theme-arvan flex flex-1 flex-col">
       <header className="border-b border-line bg-surface">
         <div className="mx-auto flex w-full max-w-2xl items-center gap-2.5 px-4 py-4">
           <Link href="/" className="flex items-center gap-2.5 font-semibold tracking-tight">

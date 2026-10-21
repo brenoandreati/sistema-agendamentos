@@ -184,6 +184,8 @@ prisma/schema.prisma        tabelas: negócio, usuários, profissionais, horári
 wrangler.jsonc              configuração do Cloudflare Workers
 open-next.config.ts         configuração do adaptador Next.js → Cloudflare
 src/config/brand.ts         nome e slogan do sistema
+src/components/brand-logo.tsx  logo da Arvan em vetor (o "A" segue a cor do texto, o "V" é sempre azul)
+public/icon.svg             ícone do navegador; icon-192/512.png, apple-icon.png e favicon.ico saem dele
 src/config/niches.ts        áreas de atuação (cor, ícone, serviços padrão, nome da equipe e frase de boas-vindas)
 src/config/demo.ts          negócios da demonstração (profissionais, serviços e clientes de cada área)
 src/app/globals.css         temas visuais de cada área (fontes, cantos, fundo e menu), em [data-niche]
