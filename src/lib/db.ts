@@ -14,9 +14,12 @@ function connectionString(env?: DatabaseEnv) {
   return url;
 }
 
+// A logo (imagem guardada no banco) só é lida pela rota /api/logo: as outras consultas não a carregam.
 function createClient(url: string) {
-  return new PrismaClient({ adapter: new PrismaPg({ connectionString: url }) });
+  return new PrismaClient({ adapter: new PrismaPg({ connectionString: url }), omit: { shop: { logoUrl: true } } });
 }
+
+type Db = ReturnType<typeof createClient>;
 
 function workerContext() {
   if (typeof navigator === "undefined" || navigator.userAgent !== "Cloudflare-Workers") return null;
@@ -27,10 +30,10 @@ function workerContext() {
   }
 }
 
-const perRequest = new WeakMap<object, PrismaClient>();
-const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
+const perRequest = new WeakMap<object, Db>();
+const globalForPrisma = globalThis as unknown as { prisma?: Db };
 
-function currentClient(): PrismaClient {
+function currentClient(): Db {
   const cf = workerContext();
   if (cf) {
     let client = perRequest.get(cf.ctx);
@@ -45,7 +48,7 @@ function currentClient(): PrismaClient {
 }
 
 /** Acesso ao banco. Resolve o cliente certo para a requisição atual a cada uso. */
-export const db = new Proxy({} as PrismaClient, {
+export const db = new Proxy({} as Db, {
   get(_, property) {
     const client = currentClient();
     const value = Reflect.get(client, property, client);

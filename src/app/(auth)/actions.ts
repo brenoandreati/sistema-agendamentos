@@ -2,7 +2,8 @@
 
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { createSession, destroySession } from "@/lib/auth";
+import { findPasswordReset } from "@/lib/admin";
+import { createCustomerSession, createSession, destroySession } from "@/lib/auth";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { EMAIL_RE, fail, isReservedEmail, MIN_PASSWORD, text, type ActionState } from "@/lib/action";
 import { onlyDigits, slugify } from "@/lib/format";
@@ -93,4 +94,35 @@ export async function signIn(_: ActionState, form: FormData): Promise<ActionStat
 export async function signOut() {
   await destroySession();
   redirect("/entrar");
+}
+
+/** Senha nova pelo link de uso único (gerado no painel de administração). */
+export async function resetPassword(_: ActionState, form: FormData): Promise<ActionState> {
+  const code = text(form, "codigo", 100);
+  const password = text(form, "password", 200);
+  if (!(await allWithinLimits([[`reset:ip:${await clientIp()}`, 10, 3600]]))) return fail(TOO_MANY);
+  if (password.length < MIN_PASSWORD) return fail(`A senha precisa ter pelo menos ${MIN_PASSWORD} caracteres.`);
+  if (password !== text(form, "confirm", 200)) return fail("As duas senhas não são iguais.");
+  const reset = await findPasswordReset(code);
+  if (!reset) return fail("Este link não vale mais. Peça um novo ao suporte.");
+
+  const passwordHash = await hashPassword(password);
+  // Marca como usado só se ninguém usou antes (dois envios ao mesmo tempo não valem duas vezes).
+  const used = await db.passwordReset.updateMany({ where: { id: reset.id, usedAt: null }, data: { usedAt: new Date() } });
+  if (used.count !== 1) return fail("Este link não vale mais. Peça um novo ao suporte.");
+  // A senha nova desconecta todos os aparelhos que estavam logados.
+  if (reset.user) {
+    const user = await db.user.update({
+      where: { id: reset.user.id },
+      data: { passwordHash, sessionVersion: { increment: 1 } },
+    });
+    await createSession(user);
+    redirect("/painel");
+  }
+  const customer = await db.customer.update({
+    where: { id: reset.customer!.id },
+    data: { passwordHash, sessionVersion: { increment: 1 } },
+  });
+  await createCustomerSession(customer);
+  redirect("/cliente");
 }

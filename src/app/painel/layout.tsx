@@ -1,8 +1,9 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { ExternalLink, LogOut, RotateCcw } from "lucide-react";
+import { ExternalLink, LifeBuoy, LogOut, RotateCcw, ShieldCheck } from "lucide-react";
+import { isAdminEmail, supportWhatsapp } from "@/lib/admin";
 import { requireUser } from "@/lib/auth";
-import { brandStyle } from "@/lib/format";
+import { brandStyle, whatsappLink } from "@/lib/format";
 import { SubmitButton } from "@/components/forms";
 import { ShopMark } from "@/components/shop-mark";
 import { buttonClass } from "@/components/ui";
@@ -15,6 +16,7 @@ import { BottomNav, SidebarNav } from "./nav";
 export default async function PanelLayout({ children }: { children: ReactNode }) {
   const user = await requireUser();
   const { shop } = user;
+  const support = supportWhatsapp();
 
   return (
     <div style={brandStyle(shop.primaryColor)} data-niche={shop.niche} className="flex min-h-dvh flex-1 bg-bg">
@@ -30,11 +32,28 @@ export default async function PanelLayout({ children }: { children: ReactNode })
         <div className="mt-auto border-t border-sidebar-line px-3 pt-4">
           <p className="truncate text-sm font-medium">{user.name}</p>
           <p className="truncate text-xs text-sidebar-muted">{shop.isDemo ? "Demonstração" : user.email}</p>
-          <form action={signOut} className="mt-3">
-            <button className="flex items-center gap-2 text-sm text-sidebar-muted hover:text-sidebar-fg">
-              <LogOut className="size-4" aria-hidden /> Sair
-            </button>
-          </form>
+          <div className="mt-3 flex flex-col items-start gap-2 text-sm text-sidebar-muted">
+            {support && !shop.isDemo && (
+              <a
+                href={whatsappLink(support, `Olá! Preciso de ajuda com o Arvan Agendamentos (${shop.name}).`)}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-2 hover:text-sidebar-fg"
+              >
+                <LifeBuoy className="size-4" aria-hidden /> Suporte
+              </a>
+            )}
+            {isAdminEmail(user.email) && (
+              <Link href="/admin" className="flex items-center gap-2 hover:text-sidebar-fg">
+                <ShieldCheck className="size-4" aria-hidden /> Administração
+              </Link>
+            )}
+            <form action={signOut}>
+              <button className="flex items-center gap-2 hover:text-sidebar-fg">
+                <LogOut className="size-4" aria-hidden /> Sair
+              </button>
+            </form>
+          </div>
         </div>
       </aside>
 
