@@ -37,8 +37,15 @@ export async function deleteClient(_: ActionState, form: FormData): Promise<Acti
   const id = text(form, "id");
   const client = await db.client.findFirst({ where: { id, shopId }, include: { _count: { select: { appointments: true } } } });
   if (!client) return fail("Cliente não encontrado.");
-  if (client._count.appointments > 0) return fail("Esse cliente tem agendamentos no histórico e não pode ser excluído.");
-  await db.client.delete({ where: { id } });
+  if (client._count.appointments > 0) {
+    // Com histórico, os atendimentos e pagamentos ficam, mas sem nome, telefone, e-mail e observações.
+    await db.client.update({
+      where: { id },
+      data: { name: "Cliente removido", phone: `removido-${client.id}`, email: null, notes: null },
+    });
+  } else {
+    await db.client.delete({ where: { id } });
+  }
   revalidatePath("/painel/clientes");
   redirect("/painel/clientes");
 }

@@ -9,13 +9,13 @@ import { getCustomer } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { APPOINTMENT_STATUS, brandStyle, formatPhone } from "@/lib/format";
 import { formatDateShort, formatTime, toDateStr } from "@/lib/time";
-import { customerSignOut } from "./actions";
+import { customerDeleteAccount, customerSignOut } from "./actions";
 import { LoginPanel } from "./login-panel";
 
 export const metadata: Metadata = { title: "Minha conta" };
 
 export default async function CustomerPage({ searchParams }: PageProps<"/cliente">) {
-  const { voltar } = await searchParams;
+  const { voltar, excluida, excluir } = await searchParams;
   const back = typeof voltar === "string" && /^\/agendar\/[a-z0-9-]+$/.test(voltar) ? voltar : null;
   const customer = await getCustomer();
 
@@ -23,6 +23,11 @@ export default async function CustomerPage({ searchParams }: PageProps<"/cliente
     return (
       <div className="mx-auto max-w-sm">
         {back && <BackLink href={back} />}
+        {excluida && (
+          <p className="mb-4 rounded-control border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm" role="status">
+            Sua conta foi apagada.
+          </p>
+        )}
         <h1 className="text-xl font-semibold">Minha conta</h1>
         <p className="mt-1 mb-5 text-sm text-muted">
           Com uma conta, seus dados já vêm preenchidos nos próximos agendamentos e você vê todos os seus horários aqui.
@@ -37,7 +42,7 @@ export default async function CustomerPage({ searchParams }: PageProps<"/cliente
   const appointments = await db.appointment.findMany({
     where: { customerId: customer.id },
     include: {
-      shop: { select: { name: true, slug: true, timezone: true, logoUrl: true, niche: true, primaryColor: true } },
+      shop: { select: { id: true, name: true, slug: true, timezone: true, logoUpdatedAt: true, niche: true, primaryColor: true } },
       services: { select: { name: true } },
       professional: { select: { name: true } },
     },
@@ -79,6 +84,22 @@ export default async function CustomerPage({ searchParams }: PageProps<"/cliente
           <Row key={a.id} appointment={a} />
         ))}
       </Section>
+      <details className="mt-10 text-sm" open={excluir === "confirme"}>
+        <summary className="cursor-pointer text-muted hover:text-fg">Apagar minha conta</summary>
+        <form action={customerDeleteAccount} className="mt-3 flex flex-col items-start gap-3 rounded-card border border-line bg-surface p-4">
+          <p className="text-muted">
+            Sua conta, e-mail e senha são apagados. Os horários continuam com os negócios onde foram marcados, porque eles precisam do
+            histórico. Para apagar esses dados também, peça ao negócio.
+          </p>
+          <label className="flex items-center gap-2">
+            <input type="checkbox" name="confirmar" className="size-4 accent-brand" /> Quero apagar minha conta
+          </label>
+          {excluir === "confirme" && <p className="text-red-500">Marque a caixa para confirmar.</p>}
+          <button className="rounded-button border border-red-500/40 px-3 py-1.5 font-medium text-red-500 hover:bg-red-500/10">
+            Apagar conta
+          </button>
+        </form>
+      </details>
     </>
   );
 }
@@ -88,7 +109,7 @@ type Item = {
   startAt: Date;
   status: AppointmentStatus;
   publicToken: string;
-  shop: { name: string; slug: string; timezone: string; logoUrl: string | null; niche: Niche; primaryColor: string };
+  shop: { id: string; name: string; slug: string; timezone: string; logoUpdatedAt: Date | null; niche: Niche; primaryColor: string };
   services: { name: string }[];
   professional: { name: string };
 };

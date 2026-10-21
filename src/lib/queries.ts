@@ -1,5 +1,8 @@
 import "server-only";
-import type { Prisma } from "@prisma/client";
+import type { Prisma, Shop } from "@prisma/client";
+
+/** Negócio como as consultas devolvem: a imagem da logo só é lida pela rota /api/logo. */
+export type ShopRow = Omit<Shop, "logoUrl">;
 
 /** Dados que as telas de agendamento usam. `payments` traz só os pagamentos aprovados. */
 export const appointmentInclude = {

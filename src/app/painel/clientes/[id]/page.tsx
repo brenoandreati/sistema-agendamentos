@@ -74,13 +74,26 @@ export default async function ClientPage({ params }: PageProps<"/painel/clientes
           <Card className="p-5">
             <ClientForm client={client} />
           </Card>
-          {appointments.length === 0 && (
+          {appointments.length === 0 ? (
             <ActionForm action={deleteClient} confirm="Excluir este cliente?">
               <input type="hidden" name="id" value={client.id} />
               <SubmitButton variant="danger" size="sm" pendingText="Excluindo...">
                 Excluir cliente
               </SubmitButton>
             </ActionForm>
+          ) : (
+            !client.phone.startsWith("removido-") && (
+              <ActionForm
+                action={deleteClient}
+                confirm="Apagar nome, WhatsApp, e-mail e observações deste cliente? Os atendimentos e pagamentos continuam no histórico, sem os dados pessoais. Não dá para desfazer."
+              >
+                <input type="hidden" name="id" value={client.id} />
+                <SubmitButton variant="danger" size="sm" pendingText="Apagando...">
+                  Apagar dados pessoais
+                </SubmitButton>
+                <p className="mt-1 text-xs text-muted">Use quando o cliente pedir para excluir os dados dele (LGPD).</p>
+              </ActionForm>
+            )
           )}
         </section>
       </div>

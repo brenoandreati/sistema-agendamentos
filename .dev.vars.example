@@ -2,3 +2,13 @@
 DATABASE_URL="postgresql://barber:barber@localhost:5432/arvan_dev?schema=public"
 AUTH_SECRET="dev-secret-troque-em-producao-0123456789abcdef"
 APP_URL="http://localhost:8787"
+
+# Avisos no celular do dono do negócio (gere com: npm run vapid)
+VAPID_PUBLIC_KEY=""
+VAPID_PRIVATE_KEY=""
+
+# E-mails de quem acessa /admin (separados por vírgula). Precisa ter conta de negócio com esse e-mail.
+ADMIN_EMAILS=""
+
+# WhatsApp do suporte da plataforma, com DDD (botão "Suporte" e "Esqueci minha senha")
+SUPPORT_WHATSAPP=""

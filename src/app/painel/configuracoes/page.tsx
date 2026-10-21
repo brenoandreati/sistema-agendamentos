@@ -102,7 +102,7 @@ export default async function SettingsPage() {
                 </Field>
               </div>
             </div>
-            {shop.logoUrl && <Checkbox name="removeLogo" label="Remover logo" />}
+            {shop.logoUpdatedAt && <Checkbox name="removeLogo" label="Remover logo" />}
             <div>
               <SubmitButton>Salvar</SubmitButton>
             </div>

@@ -15,13 +15,14 @@ export function ShopMark({
   shop,
   size = "md",
 }: {
-  shop: { logoUrl: string | null; niche: Niche };
+  shop: { id: string; logoUpdatedAt: Date | null; niche: Niche };
   size?: keyof typeof SIZES;
 }) {
   const s = SIZES[size];
-  if (shop.logoUrl) {
+  if (shop.logoUpdatedAt) {
+    // A versão no endereço faz o navegador buscar de novo só quando a logo muda.
     // eslint-disable-next-line @next/next/no-img-element
-    return <img src={shop.logoUrl} alt="" className={cn(s.box, "shrink-0 object-cover")} />;
+    return <img src={`/api/logo/${shop.id}?v=${shop.logoUpdatedAt.getTime()}`} alt="" className={cn(s.box, "shrink-0 object-cover")} />;
   }
   const Icon = NICHES[shop.niche].icon;
   return (

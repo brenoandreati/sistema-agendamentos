@@ -36,6 +36,7 @@ export async function ensureDemoShop(niche: Niche, { reset = false } = {}) {
         address: config.address,
         instagram: config.instagram,
         logoUrl: null,
+        logoUpdatedAt: null,
         primaryColor: NICHES[niche].color,
         timezone: TIMEZONE,
         slotIntervalMin: 30,

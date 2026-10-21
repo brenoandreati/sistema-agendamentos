@@ -1,12 +1,12 @@
 import "server-only";
-import type { PaymentMethod, Shop } from "@prisma/client";
+import type { PaymentMethod } from "@prisma/client";
 import { db } from "./db";
 import { periodRange, type Period } from "./period";
-import { appointmentInclude, paidCents } from "./queries";
+import { appointmentInclude, paidCents, type ShopRow } from "./queries";
 import { toDateStr, zonedToUtc } from "./time";
 
 /** Relatório financeiro do período: o que entrou, o que falta receber e quem pagou. */
-export async function getFinanceReport(shop: Shop, period: Period, date: string) {
+export async function getFinanceReport(shop: ShopRow, period: Period, date: string) {
   const tz = shop.timezone;
   const range = periodRange(period, date);
   const from = zonedToUtc(range.start, 0, tz);

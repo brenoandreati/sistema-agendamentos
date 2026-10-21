@@ -15,6 +15,9 @@
   //   DATABASE_URL     endereço do banco PostgreSQL (ex.: Neon)
   //   AUTH_SECRET      chave secreta aleatória (openssl rand -hex 32)
   //   APP_URL          endereço público do sistema, ex.: https://arvan-agendamentos.SEU-USUARIO.workers.dev
+  //   VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY   chaves dos avisos no celular (npm run vapid)
+  //   ADMIN_EMAILS     e-mails que acessam /admin, separados por vírgula
+  //   SUPPORT_WHATSAPP WhatsApp do suporte da plataforma, com DDD
   //
   // Opcional, para o banco responder mais rápido: crie um Hyperdrive apontando para o banco e adicione
   //   "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "<id do hyperdrive>" }]

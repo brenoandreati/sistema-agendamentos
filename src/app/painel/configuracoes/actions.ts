@@ -65,7 +65,14 @@ export async function saveAppearance(_: ActionState, form: FormData): Promise<Ac
     logoUrl = `data:${file.type};base64,${base64}`;
   }
 
-  await db.shop.update({ where: { id: shopId }, data: { niche, primaryColor: color, ...(logoUrl !== undefined ? { logoUrl } : {}) } });
+  await db.shop.update({
+    where: { id: shopId },
+    data: {
+      niche,
+      primaryColor: color,
+      ...(logoUrl !== undefined ? { logoUrl, logoUpdatedAt: logoUrl ? new Date() : null } : {}),
+    },
+  });
   revalidatePath("/", "layout");
   return saved;
 }

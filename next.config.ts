@@ -5,6 +5,13 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["@prisma/client", ".prisma/client"],
   // O driver do Postgres usa um módulo que só é carregado no Cloudflare; o Next não o detecta sozinho.
   outputFileTracingIncludes: { "/*": ["./node_modules/pg-cloudflare/**/*"] },
+  // Endereços que as pessoas digitam com acento ou de forma curta.
+  async redirects() {
+    return [
+      { source: "/demonstra%C3%A7%C3%A3o", destination: "/demonstracao", permanent: true },
+      { source: "/demo", destination: "/demonstracao", permanent: true },
+    ];
+  },
   turbopack: {
     rules: {
       "*.css": {

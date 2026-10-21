@@ -1,6 +1,7 @@
 import "server-only";
 import { headers } from "next/headers";
 import type { PaymentMethod, Shop } from "@prisma/client";
+import type { ShopRow } from "./queries";
 import { db } from "./db";
 import { decryptSecret } from "./crypto";
 import { addNote } from "./format";
@@ -27,7 +28,7 @@ export async function chargesOnline(shop: Pick<Shop, "mpAccessToken" | "isDemo" 
 }
 
 /** Quanto o cliente paga ao agendar. Sem Mercado Pago conectado, nada: paga no local. */
-export async function chargeAtBookingCents(shop: Shop, totalCents: number) {
+export async function chargeAtBookingCents(shop: ShopRow, totalCents: number) {
   return (await chargesOnline(shop)) ? onlineAmountCents(shop, totalCents) : 0;
 }
 
@@ -40,7 +41,7 @@ export async function appBaseUrl(): Promise<string> {
 }
 
 type CheckoutInput = {
-  shop: Shop;
+  shop: ShopRow;
   appointment: { id: string; publicToken: string; holdExpiresAt: Date | null; clientId: string };
   clientName: string;
   title: string;
@@ -150,7 +151,7 @@ export async function approvePayment(
 }
 
 /** Consulta um pagamento no Mercado Pago e atualiza o sistema. */
-export async function syncMercadoPagoPayment(shop: Shop, providerPaymentId: string) {
+export async function syncMercadoPagoPayment(shop: ShopRow, providerPaymentId: string) {
   const token = await mercadoPagoToken(shop);
   if (!token) return null;
   const remote = await getPayment(token, providerPaymentId);

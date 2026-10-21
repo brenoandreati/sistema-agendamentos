@@ -1,5 +1,6 @@
 import "server-only";
-import type { Prisma, Shop } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
+import type { ShopRow } from "./queries";
 import { db } from "./db";
 import { computeSlots, earliestStartOn, type Interval } from "./availability";
 import { dayRange, diffDays, minutesOfDay, todayStr, weekdayOf } from "./time";
@@ -44,7 +45,7 @@ function toDayInterval(start: Date, end: Date, day: { start: Date; end: Date }, 
 }
 
 type AvailabilityOptions = {
-  shop: Shop;
+  shop: ShopRow;
   dateStr: string;
   durationMin: number;
   professionalIds: string[];

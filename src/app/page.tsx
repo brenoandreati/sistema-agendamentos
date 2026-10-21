@@ -1,4 +1,5 @@
-import type { Viewport } from "next";
+import type { Metadata, Viewport } from "next";
+import Link from "next/link";
 import { CalendarCheck, QrCode, Wallet } from "lucide-react";
 import { NicheChoice } from "@/components/niche-choice";
 import { AppMark } from "@/components/shop-mark";
@@ -6,6 +7,14 @@ import { LinkButton } from "@/components/ui";
 import { BRAND } from "@/config/brand";
 
 export const viewport: Viewport = { themeColor: "#02081a" };
+
+export const metadata: Metadata = {
+  openGraph: {
+    title: BRAND.name,
+    description: `${BRAND.tagline}. Agenda online, pagamento na hora de agendar e financeiro para barbearias, salões, nail designers e estética.`,
+    type: "website",
+  },
+};
 
 const FEATURES = [
   {
@@ -76,8 +85,16 @@ export default function HomePage() {
           ))}
         </section>
 
-        <footer className="flex items-center justify-center gap-2 border-t border-line py-6 text-sm text-muted">
-          <AppMark className="h-4" /> {BRAND.name}
+        <footer className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 border-t border-line py-6 text-sm text-muted">
+          <span className="flex items-center gap-2">
+            <AppMark className="h-4" /> {BRAND.name}
+          </span>
+          <Link href="/termos" className="hover:text-fg">
+            Termos de uso
+          </Link>
+          <Link href="/privacidade" className="hover:text-fg">
+            Privacidade
+          </Link>
         </footer>
       </div>
     </main>
