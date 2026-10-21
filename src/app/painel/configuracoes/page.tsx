@@ -35,7 +35,13 @@ export default async function SettingsPage() {
   return (
     <>
       <PageHeader title="Configurações" />
-      <div className="flex max-w-3xl flex-col gap-6">
+      {shop.isDemo && (
+        <p className="mb-4 max-w-3xl rounded-control border border-brand/30 bg-brand/5 p-3 text-sm">
+          Na demonstração as configurações ficam travadas, para todo mundo ver o mesmo negócio.
+        </p>
+      )}
+      {/* Na demonstração, desativa todos os campos de uma vez. */}
+      <fieldset disabled={shop.isDemo} className="flex max-w-3xl min-w-0 flex-col gap-6">
         <Section title="Seu negócio" description="Esses dados aparecem para o cliente na página de agendamento.">
           <ActionForm action={saveShopInfo} className="flex flex-col gap-4">
             <Field label="Nome">
@@ -192,7 +198,7 @@ export default async function SettingsPage() {
             <SubmitButton>Alterar senha</SubmitButton>
           </ActionForm>
         </Section>
-      </div>
+      </fieldset>
     </>
   );
 }

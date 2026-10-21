@@ -18,7 +18,14 @@ type Service = { id: string; name: string; description: string | null; durationM
 type Professional = { id: string; name: string; color: string; serviceIds: string[]; weekdays: number[] };
 type Day = { date: string; weekday: number; label: string; day: string; month: string };
 
-const STEPS = ["Serviço", "Profissional", "Horário", "Seus dados"];
+type Step = "professional" | "service" | "time" | "details";
+
+const STEP_LABELS: Record<Step, string> = {
+  professional: "Profissional",
+  service: "Serviço",
+  time: "Horário",
+  details: "Seus dados",
+};
 const SAVED_CONTACT = "agendamento:contato";
 
 export function BookingFlow({
@@ -37,9 +44,14 @@ export function BookingFlow({
   payment: { paymentMode: PaymentMode; depositPercent: number; holdMin: number };
 }) {
   const router = useRouter();
-  const [step, setStep] = useState(0);
+  // Com mais de um profissional, o cliente escolhe primeiro com quem quer ser atendido.
+  const single = professionals.length <= 1;
+  const steps: Step[] = single ? ["service", "time", "details"] : ["professional", "service", "time", "details"];
+  const [stepIndex, setStepIndex] = useState(0);
+  const step = steps[stepIndex];
   const [serviceIds, setServiceIds] = useState<string[]>([]);
-  const [professionalId, setProfessionalId] = useState("any");
+  // null = ainda não escolheu; "any" = sem preferência.
+  const [professionalId, setProfessionalId] = useState<string | null>(single ? (professionals[0]?.id ?? null) : null);
   const [date, setDate] = useState<string | null>(null);
   const [time, setTime] = useState<number | null>(null);
   const [slots, setSlots] = useState<number[] | null>(null);
@@ -57,18 +69,30 @@ export function BookingFlow({
   const duration = chosen.reduce((sum, s) => sum + s.durationMin, 0);
   const payNow = onlineAmountCents(payment, total);
 
+  const professional = professionals.find((p) => p.id === professionalId);
+  /** Serviços do profissional escolhido ou, sem preferência, de qualquer um deles. */
+  const offered = useMemo(() => {
+    const ids = new Set((professional ? [professional] : professionals).flatMap((p) => p.serviceIds));
+    return services.filter((s) => ids.has(s.id));
+  }, [services, professionals, professional]);
   const eligible = useMemo(
     () => professionals.filter((p) => serviceIds.every((id) => p.serviceIds.includes(id))),
     [professionals, serviceIds],
   );
-  const candidates = professionalId === "any" ? eligible : eligible.filter((p) => p.id === professionalId);
+  const candidates = professional ? eligible.filter((p) => p.id === professional.id) : eligible;
   const workingDays = new Set(candidates.flatMap((p) => p.weekdays));
-  const professional = professionals.find((p) => p.id === professionalId);
+  const servicesOf = (p: Professional) =>
+    services
+      .filter((s) => p.serviceIds.includes(s.id))
+      .map((s) => s.name)
+      .join(" · ");
+
+  const goTo = (target: Step) => setStepIndex(steps.indexOf(target));
 
   useEffect(() => {
     if (!date || !serviceIds.length) return;
     const controller = new AbortController();
-    const params = new URLSearchParams({ data: date, servicos: serviceIds.join(","), prof: professionalId });
+    const params = new URLSearchParams({ data: date, servicos: serviceIds.join(","), prof: professionalId ?? "any" });
     fetch(`/api/agendar/${slug}/horarios?${params}`, { signal: controller.signal, cache: "no-store" })
       .then((res) => res.json())
       .then((data: { slots: number[] }) => setSlots(data.slots))
@@ -83,10 +107,13 @@ export function BookingFlow({
   }
 
   function chooseProfessional(id: string) {
+    const picked = professionals.find((p) => p.id === id);
     setProfessionalId(id);
+    // Tira os serviços que o novo profissional não faz.
+    if (picked) setServiceIds((current) => current.filter((s) => picked.serviceIds.includes(s)));
     setTime(null);
     setSlots(null);
-    setStep(2);
+    goTo("service");
   }
 
   function chooseDate(value: string) {
@@ -97,7 +124,7 @@ export function BookingFlow({
 
   function chooseTime(slot: number) {
     setTime(slot);
-    setStep(3);
+    goTo("details");
     // Sem conta, preenche os dados de quem já agendou neste aparelho.
     if (customer || name || phone) return;
     try {
@@ -112,7 +139,17 @@ export function BookingFlow({
     if (date === null || time === null) return;
     setError(null);
     startSubmit(async () => {
-      const result = await createBooking({ slug, serviceIds, professionalId, date, time, name, phone, email, notes });
+      const result = await createBooking({
+        slug,
+        serviceIds,
+        professionalId: professionalId ?? "any",
+        date,
+        time,
+        name,
+        phone,
+        email,
+        notes,
+      });
       if ("error" in result) {
         setError(result.error);
         return;
@@ -135,30 +172,68 @@ export function BookingFlow({
 
   return (
     <div className="pb-28">
-      <ol className="mb-6 grid grid-cols-4 gap-2" aria-label="Etapas">
-        {STEPS.map((label, i) => (
-          <li key={label}>
+      <ol className={cn("mb-6 grid gap-2", single ? "grid-cols-3" : "grid-cols-4")} aria-label="Etapas">
+        {steps.map((key, i) => (
+          <li key={key}>
             <button
               type="button"
-              disabled={i > step}
-              onClick={() => setStep(i)}
+              disabled={i > stepIndex}
+              onClick={() => setStepIndex(i)}
               className="flex w-full flex-col gap-1.5 text-left disabled:cursor-default"
-              aria-current={i === step ? "step" : undefined}
+              aria-current={i === stepIndex ? "step" : undefined}
             >
-              <span className={cn("h-1 rounded-full", i <= step ? "bg-brand" : "bg-line")} />
-              <span className={cn("text-xs font-medium", i === step ? "text-fg" : "text-muted")}>{label}</span>
+              <span className={cn("h-1 rounded-full", i <= stepIndex ? "bg-brand" : "bg-line")} />
+              <span className={cn("text-xs font-medium", i === stepIndex ? "text-fg" : "text-muted")}>{STEP_LABELS[key]}</span>
             </button>
           </li>
         ))}
       </ol>
 
-      {step === 0 && (
+      {step === "professional" && (
+        <section>
+          <h2 className="mb-1 font-display text-2xl font-semibold">Com quem você quer agendar?</h2>
+          <p className="mb-4 text-sm text-muted">Depois você escolhe o serviço e o horário.</p>
+          <div className="flex flex-col gap-2">
+            <ChoiceButton active={professionalId === "any"} onClick={() => chooseProfessional("any")}>
+              <span className="grid size-11 shrink-0 place-items-center rounded-full bg-surface-2 text-muted" aria-hidden>
+                <Users className="size-5" />
+              </span>
+              <span className="min-w-0">
+                <span className="block font-medium">Sem preferência</span>
+                <span className="block text-sm text-muted">Qualquer profissional disponível</span>
+              </span>
+            </ChoiceButton>
+            {professionals.map((p) => (
+              <ChoiceButton key={p.id} active={professionalId === p.id} onClick={() => chooseProfessional(p.id)}>
+                <span
+                  className="grid size-11 shrink-0 place-items-center rounded-full text-lg font-semibold text-white"
+                  style={{ background: p.color }}
+                  aria-hidden
+                >
+                  {p.name.charAt(0).toUpperCase()}
+                </span>
+                <span className="min-w-0">
+                  <span className="block font-medium">{p.name}</span>
+                  <span className="line-clamp-2 text-sm text-muted">{servicesOf(p)}</span>
+                </span>
+              </ChoiceButton>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {step === "service" && (
         <section>
           <h2 className="mb-1 font-display text-2xl font-semibold">O que você vai fazer?</h2>
-          <p className="mb-4 text-sm text-muted">Pode escolher mais de um.</p>
-          {services.length === 0 && <p className="text-sm text-muted">Nenhum serviço disponível para agendar no momento.</p>}
-          <div className="flex flex-col gap-2">
-            {services.map((s) => {
+          <p className="mb-4 text-sm text-muted">
+            {!single && professional ? `Serviços de ${professional.name}. ` : ""}Pode escolher mais de um.
+          </p>
+          {offered.length === 0 && <p className="text-sm text-muted">Nenhum serviço disponível para agendar no momento.</p>}
+          {chosen.length > 0 && candidates.length === 0 && (
+            <Alert tone="error">Nenhum profissional faz todos esses serviços juntos. Tire um deles para continuar.</Alert>
+          )}
+          <div className="mt-2 flex flex-col gap-2">
+            {offered.map((s) => {
               const active = serviceIds.includes(s.id);
               return (
                 <button
@@ -192,42 +267,7 @@ export function BookingFlow({
         </section>
       )}
 
-      {step === 1 && (
-        <section>
-          <h2 className="mb-4 font-display text-2xl font-semibold">Com quem?</h2>
-          {eligible.length === 0 ? (
-            <p className="text-sm text-muted">Nenhum profissional faz todos esses serviços juntos. Volte e mude a escolha.</p>
-          ) : (
-            <div className="flex flex-col gap-2">
-              {eligible.length > 1 && (
-                <ChoiceButton active={professionalId === "any"} onClick={() => chooseProfessional("any")}>
-                  <span className="grid size-10 place-items-center rounded-full bg-surface-2 text-muted" aria-hidden>
-                    <Users className="size-5" />
-                  </span>
-                  <span>
-                    <span className="block font-medium">Sem preferência</span>
-                    <span className="block text-sm text-muted">Mostra os horários de todos</span>
-                  </span>
-                </ChoiceButton>
-              )}
-              {eligible.map((p) => (
-                <ChoiceButton key={p.id} active={professionalId === p.id} onClick={() => chooseProfessional(p.id)}>
-                  <span
-                    className="grid size-10 place-items-center rounded-full font-semibold text-white"
-                    style={{ background: p.color }}
-                    aria-hidden
-                  >
-                    {p.name.charAt(0).toUpperCase()}
-                  </span>
-                  <span className="font-medium">{p.name}</span>
-                </ChoiceButton>
-              ))}
-            </div>
-          )}
-        </section>
-      )}
-
-      {step === 2 && (
+      {step === "time" && (
         <section>
           <h2 className="mb-4 font-display text-2xl font-semibold">Quando?</h2>
           <div className="-mx-4 mb-5 flex gap-2 overflow-x-auto px-4 pb-2">
@@ -279,7 +319,7 @@ export function BookingFlow({
         </section>
       )}
 
-      {step === 3 && date && time !== null && (
+      {step === "details" && date && time !== null && (
         <section className="flex flex-col gap-4">
           <h2 className="font-display text-2xl font-semibold">Seus dados</h2>
           <Card className="p-4 text-sm">
@@ -378,17 +418,17 @@ export function BookingFlow({
                 {chosen.length} serviço(s) · {durationLabel(duration)}
               </p>
             </div>
-            {step > 0 && (
-              <Button type="button" variant="secondary" onClick={() => setStep(step - 1)}>
+            {stepIndex > 0 && (
+              <Button type="button" variant="secondary" onClick={() => setStepIndex(stepIndex - 1)}>
                 Voltar
               </Button>
             )}
-            {step === 0 && (
-              <Button type="button" onClick={() => setStep(eligible.length === 1 ? 2 : 1)} disabled={!eligible.length}>
+            {step === "service" && (
+              <Button type="button" onClick={() => goTo("time")} disabled={!candidates.length}>
                 Continuar
               </Button>
             )}
-            {step === 3 && (
+            {step === "details" && (
               <Button type="button" onClick={submit} disabled={submitting || !canSubmit}>
                 {submitting ? "Aguarde..." : payNow > 0 ? `Pagar ${formatMoney(payNow)}` : "Confirmar agendamento"}
               </Button>

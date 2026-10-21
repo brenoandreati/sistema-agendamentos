@@ -83,6 +83,10 @@ model Shop {
   paymentHoldMin  Int         @default(20)
   /// Token do Mercado Pago criptografado com AUTH_SECRET.
   mpAccessToken   String?
+  /// Negócio de demonstração (/demonstracao): dados fictícios e configurações travadas.
+  isDemo          Boolean     @default(false)
+  /// Quando os dados fictícios foram gerados pela última vez.
+  demoResetAt     DateTime?
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 

@@ -14,7 +14,10 @@ export default async function ProfessionalsPage() {
   const professionals = await db.professional.findMany({
     where: { shopId },
     orderBy: [{ active: "desc" }, { sortOrder: "asc" }],
-    include: { workingHours: true, _count: { select: { services: true } } },
+    include: {
+      workingHours: true,
+      services: { where: { active: true }, select: { name: true }, orderBy: { sortOrder: "asc" } },
+    },
   });
 
   return (
@@ -45,8 +48,10 @@ export default async function ProfessionalsPage() {
                 <p className="truncate text-sm text-muted">
                   {days.length
                     ? `${days.map((d) => WEEKDAYS[d].slice(0, 3)).join(", ")} · ${minutesToHHMM(first!)}–${minutesToHHMM(last!)}`
-                    : "Sem horário definido"}{" "}
-                  · {p._count.services} serviço(s)
+                    : "Sem horário definido"}
+                </p>
+                <p className="truncate text-sm text-muted">
+                  {p.services.length ? p.services.map((s) => s.name).join(" · ") : "Nenhum serviço marcado"}
                 </p>
               </div>
             </Link>

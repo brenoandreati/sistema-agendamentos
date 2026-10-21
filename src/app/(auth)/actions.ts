@@ -7,12 +7,14 @@ import { hashPassword, verifyPassword } from "@/lib/password";
 import { fail, optionalText, text, type ActionState } from "@/lib/action";
 import { onlyDigits, slugify } from "@/lib/format";
 import { defaultWorkingHours } from "@/lib/defaults";
+import { isReservedSlug } from "@/config/demo";
 import { NICHES, nicheFromSlug } from "@/config/niches";
 
 async function uniqueSlug(base: string) {
   const root = slugify(base) || "meu-negocio";
   for (let i = 1; ; i++) {
     const slug = i === 1 ? root : `${root}-${i}`;
+    if (isReservedSlug(slug)) continue;
     const taken = await db.shop.findUnique({ where: { slug }, select: { id: true } });
     if (!taken) return slug;
   }

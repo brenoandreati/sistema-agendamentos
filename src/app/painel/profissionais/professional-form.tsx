@@ -1,8 +1,10 @@
+import Link from "next/link";
 import type { Professional, Service, WorkingHour } from "@prisma/client";
 import { ActionForm, SubmitButton } from "@/components/forms";
 import { Card, Checkbox, Field, Input } from "@/components/ui";
 import { defaultWorkingHours, PROFESSIONAL_COLORS } from "@/lib/defaults";
-import { formatPhone } from "@/lib/format";
+import { durationLabel, formatPhone } from "@/lib/format";
+import { formatMoney } from "@/lib/money";
 import { minutesToHHMM, WEEKDAYS } from "@/lib/time";
 import { deleteProfessional, saveProfessional } from "./actions";
 
@@ -68,6 +70,34 @@ export function ProfessionalForm({
         </Card>
 
         <Card className="p-5">
+          <h2 className="font-semibold">Serviços que faz</h2>
+          <p className="mb-4 text-sm text-muted">
+            No agendamento online, quem escolher este profissional só vê os serviços marcados aqui.
+          </p>
+          {services.length ? (
+            <div className="grid gap-3 sm:grid-cols-2">
+              {services.map((s) => (
+                <Checkbox
+                  key={s.id}
+                  name="serviceIds"
+                  value={s.id}
+                  label={s.name}
+                  hint={`${durationLabel(s.durationMin)} · ${formatMoney(s.priceCents)}`}
+                  defaultChecked={assigned.has(s.id)}
+                />
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted">
+              Nenhum serviço cadastrado ainda.{" "}
+              <Link href="/painel/servicos/novo" className="text-brand underline">
+                Cadastrar serviço
+              </Link>
+            </p>
+          )}
+        </Card>
+
+        <Card className="p-5">
           <h2 className="font-semibold">Horário de trabalho</h2>
           <p className="mb-4 text-sm text-muted">O intervalo (almoço) é opcional. Fora desses horários ninguém consegue agendar.</p>
           <div className="flex flex-col divide-y divide-line">
@@ -82,15 +112,6 @@ export function ProfessionalForm({
                 <TimeInput label="Intervalo de" name={`day${weekday}_breakStart`} value={day.breakStart} />
                 <TimeInput label="até" name={`day${weekday}_breakEnd`} value={day.breakEnd} />
               </div>
-            ))}
-          </div>
-        </Card>
-
-        <Card className="p-5">
-          <h2 className="mb-3 font-semibold">Serviços que faz</h2>
-          <div className="grid gap-2 sm:grid-cols-2">
-            {services.map((s) => (
-              <Checkbox key={s.id} name="serviceIds" value={s.id} label={s.name} defaultChecked={assigned.has(s.id)} />
             ))}
           </div>
         </Card>

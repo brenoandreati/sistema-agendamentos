@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import type { Niche } from "@prisma/client";
 import { db } from "@/lib/db";
+import { isReservedSlug } from "@/config/demo";
 import { NICHE_ORDER } from "@/config/niches";
 import { requireUser } from "@/lib/auth";
 import { encryptSecret } from "@/lib/crypto";
@@ -12,14 +13,17 @@ import { isHexColor, onlyDigits, slugify } from "@/lib/format";
 import { getAccount, MercadoPagoError } from "@/lib/mercadopago";
 
 const saved: ActionState = { ok: true, message: "Alterações salvas." };
+const DEMO_LOCKED = "Na demonstração essa configuração não pode ser alterada.";
 
 export async function saveShopInfo(_: ActionState, form: FormData): Promise<ActionState> {
-  const { shopId } = await requireUser();
+  const { shopId, shop } = await requireUser();
+  if (shop.isDemo) return fail(DEMO_LOCKED);
   const name = text(form, "name");
   const slug = slugify(text(form, "slug"));
   const phone = optionalText(form, "phone");
   if (!name) return fail("Informe o nome do seu negócio.");
   if (slug.length < 3) return fail("O endereço do link precisa ter pelo menos 3 letras ou números.");
+  if (isReservedSlug(slug)) return fail("Esse endereço de link já está em uso. Escolha outro.");
   const taken = await db.shop.findUnique({ where: { slug }, select: { id: true } });
   if (taken && taken.id !== shopId) return fail("Esse endereço de link já está em uso. Escolha outro.");
 
@@ -41,7 +45,8 @@ const MAX_LOGO_BYTES = 300 * 1024;
 const LOGO_TYPES = ["image/png", "image/jpeg", "image/webp"];
 
 export async function saveAppearance(_: ActionState, form: FormData): Promise<ActionState> {
-  const { shopId } = await requireUser();
+  const { shopId, shop } = await requireUser();
+  if (shop.isDemo) return fail(DEMO_LOCKED);
   const color = text(form, "primaryColor");
   const niche = text(form, "niche") as Niche;
   if (!isHexColor(color)) return fail("Escolha uma cor válida.");
@@ -64,7 +69,8 @@ export async function saveAppearance(_: ActionState, form: FormData): Promise<Ac
 }
 
 export async function saveScheduleRules(_: ActionState, form: FormData): Promise<ActionState> {
-  const { shopId } = await requireUser();
+  const { shopId, shop } = await requireUser();
+  if (shop.isDemo) return fail(DEMO_LOCKED);
   const slotIntervalMin = int(form, "slotIntervalMin");
   const minNoticeMin = int(form, "minNoticeMin");
   const maxAdvanceDays = int(form, "maxAdvanceDays");
@@ -77,7 +83,8 @@ export async function saveScheduleRules(_: ActionState, form: FormData): Promise
 }
 
 export async function savePaymentSettings(_: ActionState, form: FormData): Promise<ActionState> {
-  const { shopId } = await requireUser();
+  const { shopId, shop } = await requireUser();
+  if (shop.isDemo) return fail(DEMO_LOCKED);
   const mode = text(form, "paymentMode");
   const depositPercent = int(form, "depositPercent");
   const paymentHoldMin = int(form, "paymentHoldMin");
@@ -119,6 +126,7 @@ export async function savePaymentSettings(_: ActionState, form: FormData): Promi
 
 export async function changePassword(_: ActionState, form: FormData): Promise<ActionState> {
   const user = await requireUser();
+  if (user.shop.isDemo) return fail(DEMO_LOCKED);
   const current = text(form, "current");
   const next = text(form, "next");
   if (!(await verifyPassword(current, user.passwordHash))) return fail("A senha atual está incorreta.");

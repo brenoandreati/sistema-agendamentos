@@ -11,7 +11,12 @@ export default async function BookingPage({ params }: PageProps<"/agendar/[slug]
   const { slug } = await params;
   const [catalog, customer] = await Promise.all([getBookingCatalog(slug), getCustomer()]);
   if (!catalog) notFound();
-  const { shop, services, professionals } = catalog;
+  const { shop, services } = catalog;
+  // Só aparece quem tem algum serviço ativo e horário de trabalho.
+  const activeIds = new Set(services.map((s) => s.id));
+  const professionals = catalog.professionals.filter(
+    (p) => p.services.some((s) => activeIds.has(s.id)) && p.workingHours.length > 0,
+  );
 
   const today = todayStr(shop.timezone);
   const days = Array.from({ length: Math.min(shop.maxAdvanceDays, 60) + 1 }, (_, i) => {
@@ -41,7 +46,7 @@ export default async function BookingPage({ params }: PageProps<"/agendar/[slug]
         id: p.id,
         name: p.name,
         color: p.color,
-        serviceIds: p.services.map((s) => s.id),
+        serviceIds: p.services.map((s) => s.id).filter((id) => activeIds.has(id)),
         weekdays: [...new Set(p.workingHours.map((h) => h.weekday))],
       }))}
       days={days}

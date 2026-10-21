@@ -32,3 +32,12 @@ test("lê valores em reais", () => {
   assert.equal(parseMoney("abc"), null);
   assert.equal(parseMoney(""), null);
 });
+
+test("calendário do mês começa no domingo e fecha a última semana", async () => {
+  const { monthGrid } = await import("./time");
+  const weeks = monthGrid("2026-10-01");
+  assert.equal(weeks[0][0], "2026-09-27");
+  assert.equal(weeks.at(-1)!.at(-1), "2026-10-31");
+  assert.ok(weeks.every((w) => w.length === 7));
+  assert.equal(monthGrid("2026-02-01").length, 4);
+});

@@ -27,16 +27,19 @@ No ar em: https://arvan-agendamentos.brenoandreati.workers.dev
 **Para o cliente (página pública `/agendar/<seu-negocio>`)**
 - Pode agendar **sem cadastro**, só com nome e WhatsApp (e-mail opcional).
 - Ou pode **criar uma conta**: os dados ficam salvos para as próximas vezes, e a página **Minha conta** (`/cliente`) mostra todos os horários dele, em qualquer negócio da plataforma.
-- Escolhe um ou mais serviços, o barbeiro (ou "sem preferência"), o dia e o horário livre.
+- Quando o negócio tem mais de um profissional, o cliente escolhe primeiro **com quem** quer ser atendido. A lista mostra cada nome e os serviços que a pessoa faz, e tem a opção "sem preferência". Depois aparecem só os serviços daquele profissional.
+- Quando o negócio tem um profissional só, o agendamento já começa pelo serviço.
+- Em seguida escolhe o dia e o horário livre.
 - Paga por **Pix ou cartão pelo Mercado Pago** para confirmar. O valor pode ser o total, um sinal (%) ou nada online.
 - O horário fica reservado por alguns minutos enquanto ele paga. Se não pagar, o horário volta a ficar livre.
 - Se duas pessoas tentam o mesmo horário ao mesmo tempo, só uma consegue. A outra recebe um aviso para escolher outro horário.
 - Recebe a confirmação na tela, com botão para salvar na agenda do celular e falar com o negócio no WhatsApp.
 
 **Para o negócio (painel `/painel`)**
-- **Agenda do dia** com uma coluna por barbeiro: criar, remarcar, concluir, marcar falta, cancelar e fazer encaixe.
+- **Calendário do mês** na agenda, com um pontinho nos dias que têm agendamento. Ao clicar num dia, abre a agenda daquele dia.
+- **Agenda do dia** com uma coluna por profissional, mostrando qual cliente está em cada horário: criar, remarcar, concluir, marcar falta, cancelar e fazer encaixe.
 - **Bloqueio de horários** (folga, almoço, compromisso).
-- **Vários profissionais**, cada um com seus dias e horários de trabalho (com intervalo) e os serviços que faz.
+- **Vários profissionais**, cada um com seus dias e horários de trabalho (com intervalo) e os **serviços que faz**, marcados no cadastro do profissional.
 - **Clientes** com histórico, total gasto, faltas e botão de WhatsApp com mensagem pronta de confirmação e lembrete.
 - **Financeiro** por dia, semana, mês e ano:
   - quanto entrou e a comparação com o período anterior;
@@ -47,6 +50,21 @@ No ar em: https://arvan-agendamentos.brenoandreati.workers.dev
 - Registro de pagamento presencial (Pix, dinheiro, débito, crédito) e **entradas avulsas** (cliente sem agendamento).
 - **Exportar planilha** (CSV que abre direto no Excel).
 - Funciona no celular e pode ser instalado na tela inicial, como um app.
+
+**Demonstração (`/demonstracao`)**
+- Um negócio de exemplo para cada área, com 30 dias de agenda, clientes e financeiro fictícios:
+
+  | Área | Negócio | Mostra |
+  |---|---|---|
+  | Barbearia | Barbearia Navalha de Ouro | 3 barbeiros, pagamento total online |
+  | Salão | Studio Bella Hair | 2 profissionais, sinal de 30% online |
+  | Nail designer | Bia Nails Studio | 2 nail designers, pagamento total online |
+  | Estética | Espaço Lumi Estética | 1 profissional (agendamento começa pelo serviço), pagamento no local |
+
+- Entra no painel com um clique, sem conta e sem senha. Também abre a página de agendamento que o cliente vê.
+- Pode mexer à vontade: **Restaurar dados**, no topo do painel, volta tudo ao normal. A agenda também é refeita sozinha a cada 12 horas, para acompanhar a data de hoje.
+- As configurações ficam travadas e o pagamento é sempre simulado. Ninguém consegue usar a demonstração para receber dinheiro ou mudar o link.
+- A página não aparece no Google e não tem link na página inicial. Para mostrar para alguém, mande o endereço `/demonstracao`.
 
 ---
 
@@ -167,6 +185,7 @@ wrangler.jsonc              configuração do Cloudflare Workers
 open-next.config.ts         configuração do adaptador Next.js → Cloudflare
 src/config/brand.ts         nome e slogan do sistema
 src/config/niches.ts        áreas de atuação (cor, ícone, serviços padrão, nome da equipe e frase de boas-vindas)
+src/config/demo.ts          negócios da demonstração (profissionais, serviços e clientes de cada área)
 src/app/globals.css         temas visuais de cada área (fontes, cantos, fundo e menu), em [data-niche]
 src/lib/db.ts               conexão com o banco (uma por acesso no Cloudflare)
 src/lib/availability.ts     cálculo dos horários livres (com testes)
@@ -174,9 +193,12 @@ src/lib/scheduling.ts       agenda: horários livres, conflitos e reservas expir
 src/lib/payments.ts         cobrança online e confirmação de pagamentos
 src/lib/mercadopago.ts      integração com a API do Mercado Pago
 src/lib/finance.ts          números do relatório financeiro
+src/lib/demo.ts             cria e restaura os negócios da demonstração
+src/lib/demo-data.ts        gera a agenda e os pagamentos fictícios (com testes)
 src/app/agendar/[slug]/     página pública de agendamento e pagamento
 src/app/painel/             painel do negócio (agenda, financeiro, cadastros, configurações)
 src/app/cliente/            conta do cliente: entrar, criar conta e "Minha conta"
+src/app/demonstracao/       página de demonstração de todas as áreas
 ```
 
 ## Tecnologia

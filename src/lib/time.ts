@@ -171,3 +171,16 @@ export const WEEKDAYS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Se
 function pad(n: number) {
   return String(n).padStart(2, "0");
 }
+
+/** Semanas do mês para um calendário que começa no domingo, incluindo os dias de borda dos meses vizinhos. */
+export function monthGrid(monthStart: string): string[][] {
+  const first = startOfMonth(monthStart);
+  const gridStart = addDays(first, -weekdayOf(first));
+  const last = addDays(addMonths(first, 1), -1);
+  const gridEnd = addDays(last, 6 - weekdayOf(last));
+  const weeks: string[][] = [];
+  for (let day = gridStart; day <= gridEnd; day = addDays(day, 7)) {
+    weeks.push(Array.from({ length: 7 }, (_, i) => addDays(day, i)));
+  }
+  return weeks;
+}

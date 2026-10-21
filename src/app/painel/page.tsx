@@ -102,7 +102,7 @@ export default async function DashboardPage() {
               </a>
             </div>
           </Card>
-          {!(await mercadoPagoToken(shop)) && shop.paymentMode !== "NONE" && (
+          {!shop.isDemo && !(await mercadoPagoToken(shop)) && shop.paymentMode !== "NONE" && (
             <Card className="border-amber-500/40 p-5">
               <h2 className="font-semibold">Conecte o Mercado Pago</h2>
               <p className="mt-1 mb-3 text-sm text-muted">

@@ -55,6 +55,14 @@ export default async function PublicShopLayout({ children, params }: LayoutProps
           </Link>
         </div>
       </header>
+      {shop.isDemo && (
+        <p className="border-b border-brand/25 bg-brand/8 px-4 py-2 text-center text-sm">
+          <b>Demonstração</b> · o pagamento é simulado, ninguém é cobrado.{" "}
+          <Link href="/demonstracao" className="text-brand underline">
+            Outras áreas
+          </Link>
+        </p>
+      )}
       <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-6">{children}</main>
       <footer className="py-6 text-center text-xs text-muted">
         Agendamento online por <span className="font-medium">{BRAND.name}</span>
